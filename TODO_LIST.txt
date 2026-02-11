@@ -3,7 +3,7 @@
 Last Updated: 2026-02-11
 
 ## Now
-- [ ] New interactive dashboard layout
+- [x] New interactive dashboard layout
   - Left side (about 1/3 width): root + first-level children view (table is fine if graph is too heavy)
   - Click a child row/node to make that part the new root and refresh view
   - Right side: weight rollup breakdown for children of current root
@@ -31,4 +31,3 @@ Last Updated: 2026-02-11
 ## Done
 - [x] Added weight rollup with unit-weight override + maturity factor in backend
 - [x] Added Streamlit Weight Analysis tab
-
