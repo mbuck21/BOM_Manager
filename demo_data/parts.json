@@ -2,39 +2,1353 @@
   "parts": [
     {
       "attributes": {
-        "material": "Aluminum",
-        "weight_kg": 12.0
+        "weight_kg": 32.9
       },
-      "last_updated": "2026-02-11T19:09:32Z",
-      "name": "Top Assembly",
-      "part_number": "A-100"
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SUBARRAY SUITE ASSEMBLY",
+      "part_number": "20541500-508"
     },
     {
       "attributes": {
-        "cost_usd": 12.75,
-        "material": "Steel",
-        "weight_kg": 1.5
+        "weight_kg": 10.5
       },
-      "last_updated": "2026-02-11T19:09:32Z",
-      "name": "Bracket",
-      "part_number": "B-200"
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN PROCESSOR LRU ASSEMBLY",
+      "part_number": "20541635-505"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, POWER",
+      "part_number": "20541845-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, CONNECTOR",
+      "part_number": "20541847-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLUG",
+      "part_number": "20541848-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE",
+      "part_number": "20541856-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE",
+      "part_number": "20541858-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE",
+      "part_number": "20541859-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, DIGITAL",
+      "part_number": "20541867-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, DIGITAL",
+      "part_number": "20541868-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "ADAPTER, CONNECTOR - RF, BLINDMATE",
+      "part_number": "20542679-13"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "ADAPTER, CONNECTOR - RF, BLINDMATE",
+      "part_number": "20542679-14"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "ADAPTER, CONNECTOR - RF, BLINDMATE",
+      "part_number": "20542679-5"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "HARNESS ASSEMBLY, POWER",
+      "part_number": "20543476-501"
     },
     {
       "attributes": {
-        "material": "Composite",
+        "weight_kg": 8
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "DIGITAL DISTRIBUTION ASSEMBLY",
+      "part_number": "20543782-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "DISK, LOWER PATCH",
+      "part_number": "20544126-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "POST, LOWER PATCH",
+      "part_number": "20544126-11"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PATCH, LOWER, RADIATING TILE",
+      "part_number": "20544126-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PUCK, RADIATING TILE",
+      "part_number": "20544127-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "DIVIDER, 2-WAY, CLOCK",
+      "part_number": "20544297-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "DIVIDER, 2-WAY, CAL",
+      "part_number": "20544297-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "DIVIDER, 4-WAY, CAL",
+      "part_number": "20544297-6"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "DIVIDER, 6-WAY CAL",
+      "part_number": "20544297-8"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "DIVIDER, 6-WAY, LO",
+      "part_number": "20544297-9"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "TERMINATION SUITE ASSEMBLY",
+      "part_number": "20544300-506"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE",
+      "part_number": "20544301-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, MIDPLANE",
+      "part_number": "20544301-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE",
+      "part_number": "20544306-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, VERTICAL",
+      "part_number": "20544306-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, FRONT",
+      "part_number": "20544313-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, FRONT",
+      "part_number": "20544313-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "TERMINATION HOUSING ASSEMBLY",
+      "part_number": "20544330-505"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, HOUSING",
+      "part_number": "20544332-1"
+    },
+    {
+      "attributes": {
+        "weight_kg": 4.58
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "BEAMFORMER ASSEMBLY",
+      "part_number": "20546382-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, POWER",
+      "part_number": "20546913-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, SMALL",
+      "part_number": "20547015-101"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, SMALL",
+      "part_number": "20547015-103"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, SMALL",
+      "part_number": "20547015-109"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, SMALL",
+      "part_number": "20547015-112"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, SMALL",
+      "part_number": "20547015-115"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, SMALL",
+      "part_number": "20547015-120"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, MEDIUM",
+      "part_number": "20547015-202"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, MEDIUM",
+      "part_number": "20547015-205"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, MEDIUM",
+      "part_number": "20547015-206"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSY - RF, PHASE STABLE, MEDIUM",
+      "part_number": "20547015-209"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, POWER",
+      "part_number": "20547016-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BODY",
+      "part_number": "20547028-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "FLANGE",
+      "part_number": "20547028-21"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "FLANGE",
+      "part_number": "20547028-22"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PORT PLUG",
+      "part_number": "20547028-23"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PORT PLUG",
+      "part_number": "20547028-24"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BODY",
+      "part_number": "20547028-25"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "CONNECTOR, FLUID I/O",
+      "part_number": "20547028-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "CONNECTOR, FLUID I/O",
+      "part_number": "20547028-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SHIM",
+      "part_number": "20547033-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SHIM",
+      "part_number": "20547033-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, MOUNTING",
+      "part_number": "20547035-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BRACKET, SHIELDING, TERMINATION",
+      "part_number": "20547038-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BRACKET, SHIELDING, TERMINATION",
+      "part_number": "20547039-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BRACKET, SHIELDING, TERMINATION",
+      "part_number": "20547039-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SHIM, FACEPLATE",
+      "part_number": "20547045-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SHIM, FACEPLATE",
+      "part_number": "20547045-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SHIM, FACEPLATE",
+      "part_number": "20547045-3"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "WIRE BRACKET",
+      "part_number": "20547046-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET",
+      "part_number": "20547053-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET",
+      "part_number": "20547054-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20547087-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SPACER",
+      "part_number": "20547089-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "O RING",
+      "part_number": "20547103-1"
+    },
+    {
+      "attributes": {
+        "weight_kg": 2.26
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CCA - FILTER CIRCULATOR, ODD",
+      "part_number": "20547110-1"
+    },
+    {
+      "attributes": {
+        "weight_kg": 2.26
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CCA - FILTER CIRCULATOR, EVEN",
+      "part_number": "20547110-2"
+    },
+    {
+      "attributes": {
+        "weight_kg": 2.26
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CCA - FILTER CIRCULATOR, EVEN CAL",
+      "part_number": "20547110-4"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SHOULDER BOLT",
+      "part_number": "20547138-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SHOULDER BOLT",
+      "part_number": "20547138-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SENSOR BACK",
+      "part_number": "20547146-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "ADAPTER, TEMPERATURE SENSOR",
+      "part_number": "20547148-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLUG, TEMPERATURE SENSOR",
+      "part_number": "20547149-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BLOCK, ALIGNMENT",
+      "part_number": "20547163-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "NEST, ALIGNMENT",
+      "part_number": "20547164-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "NEST, ALIGNMENT",
+      "part_number": "20547164-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "SLUG, ALIGNMENT",
+      "part_number": "20547165-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "LIFT BLOCK",
+      "part_number": "20547167-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "LIFT BLOCK",
+      "part_number": "20547168-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "LIFT BLOCK",
+      "part_number": "20547168-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "TEMP JUMPER CABLE",
+      "part_number": "20547207-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "DEW POINT JUMPER",
+      "part_number": "20547208-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "LEAK DETECT JUMPER",
+      "part_number": "20547209-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, BRIDGE",
+      "part_number": "20547244-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, MOUNTING",
+      "part_number": "20547245-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, MOUNTING",
+      "part_number": "20547245-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, MOUNTING",
+      "part_number": "20547246-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, MOUNTING",
+      "part_number": "20547246-501"
+    },
+    {
+      "attributes": {
         "weight_kg": 0.8
       },
-      "last_updated": "2026-02-11T19:09:32Z",
-      "name": "Panel",
-      "part_number": "C-300"
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "TILE ASSEMBLY, THINNED",
+      "part_number": "20547270-501"
     },
     {
       "attributes": {
-        "weight_kg": 0.05
+        "weight_kg": 3
       },
-      "last_updated": "2026-02-11T19:09:32Z",
-      "name": "Fastener Kit",
-      "part_number": "D-400"
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "TILE ASSEMBLY, LOWER A",
+      "part_number": "20547276-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "RADIATING TILE SUBASSEMBLY, LOWER A",
+      "part_number": "20547282-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "RADIATING TILE SUBASSY, QUARTER TERMN",
+      "part_number": "20547282-3"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PATCH, TOP, RADIATING TILE",
+      "part_number": "20547284-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PATCH, TOP, RADIATING TILE",
+      "part_number": "20547284-11"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PATCH, TOP, RADIATING TILE",
+      "part_number": "20547284-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BUS, CONDUCTOR",
+      "part_number": "20549017-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BUS, CONDUCTOR (SIDE 1)",
+      "part_number": "20549017-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BUS, CONDUCTOR (SIDE 2)",
+      "part_number": "20549017-3"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "AIR_FLANGE",
+      "part_number": "20549038-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, CONNECTOR",
+      "part_number": "20549068-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BRACKET, INTERLOCK",
+      "part_number": "20549088-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BRACKET, INTERLOCK",
+      "part_number": "20549088-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "GUIDE",
+      "part_number": "20549095-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "GUIDE",
+      "part_number": "20549095-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "GUIDE",
+      "part_number": "20549095-3"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "GUIDE",
+      "part_number": "20549095-4"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "SLEEVE",
+      "part_number": "20549098-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET",
+      "part_number": "20549099-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "BEAMFORMER ASSEMBLY",
+      "part_number": "20549115-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, POWER",
+      "part_number": "20549160-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "RADOME",
+      "part_number": "20549221-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PLATE, SENSOR",
+      "part_number": "20549259-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PLATE, SENSOR",
+      "part_number": "20549260-1"
+    },
+    {
+      "attributes": {
+        "weight_kg": 3.47
+      },
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "DOOR ASSEMBLY",
+      "part_number": "20549290-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC - MULTIMODE",
+      "part_number": "20549350-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC - MULTIMODE",
+      "part_number": "20549350-17"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC - MULTIMODE",
+      "part_number": "20549350-19"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC - MULTIMODE",
+      "part_number": "20549350-2"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC - MULTIMODE",
+      "part_number": "20549350-6"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC-SINGLE MODE",
+      "part_number": "20549351-3"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC-SINGLE MODE",
+      "part_number": "20549351-7"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC - MULTIMODE",
+      "part_number": "20549352-13"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "CABLE ASSEMBLY, FIBER OPTIC - MULTIMODE",
+      "part_number": "20549352-14"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "GROMMET",
+      "part_number": "20550466-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLLAR",
+      "part_number": "20550467-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "CABLE, LIQUID LEAK DETECTOR",
+      "part_number": "20552260-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BRACKET, POWER",
+      "part_number": "20552970-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "BRACKET, POWER",
+      "part_number": "20552970-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PLATE",
+      "part_number": "20553744-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PLATE, STITCH",
+      "part_number": "20553744-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "REAR COLUMN GROUP",
+      "part_number": "20553750"
+    },
+    {
+      "attributes": {
+        "weight_kg": 236.51
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN ASSEMBLY, REAR",
+      "part_number": "20553750-501"
+    },
+    {
+      "attributes": {
+        "weight_kg": 240.09
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN ASSEMBLY, REAR",
+      "part_number": "20553750-502"
+    },
+    {
+      "attributes": {
+        "weight_kg": 240.09
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN ASSEMBLY, REAR",
+      "part_number": "20553750-503"
+    },
+    {
+      "attributes": {
+        "weight_kg": 236.51
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN ASSEMBLY, REAR",
+      "part_number": "20553750-504"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, TOP",
+      "part_number": "20553751-30"
+    },
+    {
+      "attributes": {
+        "weight_kg": 283.5
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, TOP",
+      "part_number": "20553751-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, COLUMN, SHELL",
+      "part_number": "20553752-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, COLUMN, SHELL",
+      "part_number": "20553752-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, SIDE",
+      "part_number": "20553753-30"
+    },
+    {
+      "attributes": {
+        "weight_kg": 345.9
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, SIDE",
+      "part_number": "20553753-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "ASSEMBLY, STRUCTURE",
+      "part_number": "20553754-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL",
+      "part_number": "20553756-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, SIDE",
+      "part_number": "20553756-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL",
+      "part_number": "20553757-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, SIDE",
+      "part_number": "20553757-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, TOP",
+      "part_number": "20553758-30"
+    },
+    {
+      "attributes": {
+        "weight_kg": 75
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, TOP",
+      "part_number": "20553758-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL",
+      "part_number": "20553759-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, BOTTOM",
+      "part_number": "20553759-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "ASSEMBLY, STRUCTURE",
+      "part_number": "20553760-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, COLUMN, SHELL",
+      "part_number": "20553762-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, COLUMN, SHELL",
+      "part_number": "20553762-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, COLUMN, SHELL",
+      "part_number": "20553763-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, COLUMN, SHELL",
+      "part_number": "20553763-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, BOTTOM",
+      "part_number": "20553764-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, BOTTOM",
+      "part_number": "20553764-31"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, BOTTOM",
+      "part_number": "20553764-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, BOTTOM",
+      "part_number": "20553764-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, SIDE",
+      "part_number": "20553766-20"
+    },
+    {
+      "attributes": {
+        "weight_kg": 339.4
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, SIDE",
+      "part_number": "20553766-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "TOP PLATE ASSEMBLY",
+      "part_number": "20553771-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, POWER BULKHEAD",
+      "part_number": "20553782-40"
+    },
+    {
+      "attributes": {
+        "weight_kg": 1
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, POWER BULKHEAD",
+      "part_number": "20553782-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, UPPER BULKHEAD",
+      "part_number": "20553783-40"
+    },
+    {
+      "attributes": {
+        "weight_kg": 0.4
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PANEL, UPPER BULKHEAD",
+      "part_number": "20553783-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "MANIFOLD FLANGE ASSEMBLY",
+      "part_number": "20553789-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "MANIFOLD FLANGE ASSEMBLY",
+      "part_number": "20553789-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "DOOR ASSEMBLY",
+      "part_number": "20553790-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "DOOR ASSEMBLY",
+      "part_number": "20553790-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PANEL",
+      "part_number": "20553791-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PANEL, DOOR",
+      "part_number": "20553791-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PANEL",
+      "part_number": "20553792-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "PANEL, DOOR",
+      "part_number": "20553792-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-11"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "FLOW RESTRICTOR",
+      "part_number": "20553797-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "ANTENNA ASSEMBLY, AS-4883/SPY",
+      "part_number": "20553800-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "ANTENNA SOCKET STRUCTURE ASSEMBLY",
+      "part_number": "20553820-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SEAL",
+      "part_number": "20553829-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SEAL",
+      "part_number": "20553829-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "COLDPLATE, TR",
+      "part_number": "20553830-30"
+    },
+    {
+      "attributes": {
+        "weight_kg": 155.2
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "COLDPLATE, TR",
+      "part_number": "20553830-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SEAL",
+      "part_number": "20553834-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SEAL",
+      "part_number": "20553834-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SEAL",
+      "part_number": "20553835-20"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "PLATE, SEAL",
+      "part_number": "20553835-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET",
+      "part_number": "20553838-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET",
+      "part_number": "20553838-31"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, SUPPORT, SIDE PANEL",
+      "part_number": "20553838-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "BRACKET, SUPPORT, SIDE PANEL",
+      "part_number": "20553838-502"
+    },
+    {
+      "attributes": {
+        "weight_kg": 8.8
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "PLATE, SPANNER",
+      "part_number": "20553839-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "FORWARD COLUMN GROUP",
+      "part_number": "20553840"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-503"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-504"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-505"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-506"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "PLATE, SPANNER, FACE",
+      "part_number": "20553841-20"
+    },
+    {
+      "attributes": {
+        "weight_kg": 613
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "PLATE, SPANNER, FACE",
+      "part_number": "20553841-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, BOTTOM",
+      "part_number": "20553842-30"
+    },
+    {
+      "attributes": {
+        "weight_kg": 640.9
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "STRUCTURE, BOTTOM",
+      "part_number": "20553842-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-31"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "COLDPLATE CAP, FORWARD COLUMN",
+      "part_number": "20553843-34"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE CAP, FORWARD COLUMN",
+      "part_number": "20553843-35"
+    },
+    {
+      "attributes": {
+        "weight_kg": 31.6
+      },
+      "last_updated": "2026-02-11T19:57:16Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-501"
+    },
+    {
+      "attributes": {
+        "weight_kg": 31.6
+      },
+      "last_updated": "2026-02-11T19:57:17Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-502"
+    },
+    {
+      "attributes": {
+        "weight_kg": 1.22
+      },
+      "last_updated": "2026-02-11T19:57:18Z",
+      "name": "DOOR ASSEMBLY",
+      "part_number": "20554790-501"
     }
   ]
 }
