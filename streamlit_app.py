@@ -13,6 +13,7 @@ from streamlit_ui.tabs import (
     render_dashboard_tab,
     render_parts_tab,
     render_relationships_tab,
+    render_weight_analysis_tab,
 )
 from streamlit_ui.theme import configure_page
 
@@ -62,8 +63,8 @@ def main() -> None:
         snapshots_count=len(ctx.snapshots),
     )
 
-    tab_dashboard, tab_parts, tab_relationships, tab_analysis, tab_csv = st.tabs(
-        ["Dashboard", "Parts", "Relationships", "Analysis", "CSV"]
+    tab_dashboard, tab_parts, tab_relationships, tab_analysis, tab_weight, tab_csv = st.tabs(
+        ["Dashboard", "Parts", "Relationships", "Analysis", "Weight Analysis", "CSV"]
     )
 
     with tab_dashboard:
@@ -77,6 +78,9 @@ def main() -> None:
 
     with tab_analysis:
         render_analysis_tab(ctx)
+
+    with tab_weight:
+        render_weight_analysis_tab(ctx)
 
     with tab_csv:
         render_csv_tab(ctx)

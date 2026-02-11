@@ -150,6 +150,43 @@ class TestBOMBackend(unittest.TestCase):
         self.assertAlmostEqual(result["data"]["total"], 18.5)
         self.assertGreaterEqual(len(result["warnings"]), 1)
 
+    def test_rollup_weight_with_maturity_uses_override(self) -> None:
+        self.backend.parts.add_or_update_part("A", "Assembly A")
+        self.backend.parts.add_or_update_part(
+            "B",
+            "Weighted Subassembly",
+            {"unit_weight": 100, "maturity_factor": 1.05},
+        )
+        self.backend.parts.add_or_update_part("C", "Fallback Branch")
+        self.backend.parts.add_or_update_part("D", "Should be ignored", {"unit_weight": 8})
+        self.backend.parts.add_or_update_part("E", "Leaf weight", {"unit_weight": 2})
+        self.backend.parts.add_or_update_part("F", "Unresolved leaf")
+
+        self.backend.bom.add_or_update_relationship("A", "B", qty=2, rel_id="R1")
+        self.backend.bom.add_or_update_relationship("A", "C", qty=1, rel_id="R2")
+        self.backend.bom.add_or_update_relationship("B", "D", qty=4, rel_id="R3")
+        self.backend.bom.add_or_update_relationship("C", "E", qty=3, rel_id="R4")
+        self.backend.bom.add_or_update_relationship("A", "F", qty=1, rel_id="R5")
+
+        result = self.backend.rollups.rollup_weight_with_maturity("A")
+        self.assertTrue(result["ok"])
+
+        # B contributes as override: 2 * (100 * 1.05) = 210
+        # C has no unit weight so E contributes: 1 * 3 * 2 = 6
+        self.assertAlmostEqual(result["data"]["total"], 216.0)
+
+        breakdown_parts = [item["part_number"] for item in result["data"]["breakdown"]]
+        self.assertIn("B", breakdown_parts)
+        self.assertIn("E", breakdown_parts)
+        self.assertNotIn("D", breakdown_parts)  # ignored due to B override
+
+        top_part = result["data"]["top_contributors"][0]
+        self.assertEqual(top_part["part_number"], "B")
+        self.assertAlmostEqual(top_part["total_contribution"], 210.0)
+
+        unresolved_parts = [item["part_number"] for item in result["data"]["unresolved_nodes"]]
+        self.assertIn("F", unresolved_parts)
+
 
 if __name__ == "__main__":
     unittest.main()
