@@ -1,0 +1,88 @@
+{
+  "created_at": "2026-02-11T18:42:46Z",
+  "label": "updated",
+  "parts": [
+    {
+      "attributes": {
+        "material": "Aluminum",
+        "weight_kg": 12.0
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Top Assembly",
+      "part_number": "A-100"
+    },
+    {
+      "attributes": {
+        "cost_usd": 12.75,
+        "material": "Steel",
+        "weight_kg": 1.5
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Bracket",
+      "part_number": "B-200"
+    },
+    {
+      "attributes": {
+        "material": "Composite",
+        "weight_kg": 0.8
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Panel",
+      "part_number": "C-300"
+    },
+    {
+      "attributes": {
+        "weight_kg": 0.05
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Fastener Kit",
+      "part_number": "D-400"
+    }
+  ],
+  "relationships": [
+    {
+      "attributes": {
+        "find_number": "20",
+        "note": "alternate placement"
+      },
+      "child_part_number": "B-200",
+      "last_updated": "2026-02-11T18:42:46Z",
+      "parent_part_number": "A-100",
+      "qty": 1.0,
+      "rel_id": "R-A-B-20"
+    },
+    {
+      "attributes": {
+        "find_number": "10"
+      },
+      "child_part_number": "B-200",
+      "last_updated": "2026-02-11T18:42:46Z",
+      "parent_part_number": "A-100",
+      "qty": 2.0,
+      "rel_id": "R-A-B-10"
+    },
+    {
+      "attributes": {
+        "find_number": "30"
+      },
+      "child_part_number": "C-300",
+      "last_updated": "2026-02-11T18:42:46Z",
+      "parent_part_number": "A-100",
+      "qty": 5.0,
+      "rel_id": "R-A-C"
+    },
+    {
+      "attributes": {
+        "find_number": "40"
+      },
+      "child_part_number": "D-400",
+      "last_updated": "2026-02-11T18:42:46Z",
+      "parent_part_number": "B-200",
+      "qty": 4.0,
+      "rel_id": "R-B-D"
+    }
+  ],
+  "root_part_number": "A-100",
+  "signature": "fd0a1ee34ff5e830c513a11906cf42546ff451dee546734417c86628940ae8b6",
+  "snapshot_id": "snap_20260211_184246_b15c754e"
+}

@@ -1,0 +1,5 @@
+rel_id,parent_part_number,child_part_number,qty,last_updated,find_number,note,attributes_json
+R-A-B-20,A-100,B-200,1.0,2026-02-11T18:42:46Z,20,alternate placement,"{""find_number"": ""20"", ""note"": ""alternate placement""}"
+R-A-B-10,A-100,B-200,2.0,2026-02-11T18:42:46Z,10,,"{""find_number"": ""10""}"
+R-A-C,A-100,C-300,5.0,2026-02-11T18:42:46Z,30,,"{""find_number"": ""30""}"
+R-B-D,B-200,D-400,4.0,2026-02-11T18:42:46Z,40,,"{""find_number"": ""40""}"

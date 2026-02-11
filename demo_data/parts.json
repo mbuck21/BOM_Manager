@@ -1,0 +1,40 @@
+{
+  "parts": [
+    {
+      "attributes": {
+        "material": "Aluminum",
+        "weight_kg": 12.0
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Top Assembly",
+      "part_number": "A-100"
+    },
+    {
+      "attributes": {
+        "cost_usd": 12.75,
+        "material": "Steel",
+        "weight_kg": 1.5
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Bracket",
+      "part_number": "B-200"
+    },
+    {
+      "attributes": {
+        "material": "Composite",
+        "weight_kg": 0.8
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Panel",
+      "part_number": "C-300"
+    },
+    {
+      "attributes": {
+        "weight_kg": 0.05
+      },
+      "last_updated": "2026-02-11T18:42:46Z",
+      "name": "Fastener Kit",
+      "part_number": "D-400"
+    }
+  ]
+}
