@@ -1,0 +1,120 @@
+from __future__ import annotations
+
+import streamlit as st
+
+from streamlit_ui.context import AppContext
+from streamlit_ui.helpers import part_rows, relationship_rows, show_service_result
+
+
+def render_analysis_tab(ctx: AppContext) -> None:
+    st.subheader("Subgraph Explorer")
+    root_part_number = st.text_input("Root part number", value="A-100", key="subgraph_root_part")
+    if st.button("Load Subgraph", key="load_subgraph_btn"):
+        subgraph_result = ctx.backend.bom.get_subgraph(root_part_number)
+        show_service_result("Get subgraph", subgraph_result)
+        if subgraph_result.get("ok"):
+            st.markdown("**Subgraph Parts**")
+            st.dataframe(part_rows(subgraph_result["data"]["parts"]), use_container_width=True, hide_index=True)
+            st.markdown("**Subgraph Relationships**")
+            st.dataframe(
+                relationship_rows(subgraph_result["data"]["relationships"]),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.divider()
+    st.subheader("Rollup")
+    with st.form("rollup_form"):
+        rollup_root = st.text_input("Root part", value="A-100")
+        rollup_attribute = st.text_input("Numeric attribute key", value="weight_kg")
+        include_root = st.checkbox("Include root part contribution", value=True)
+        submit_rollup = st.form_submit_button("Run Rollup")
+
+    if submit_rollup:
+        rollup_result = ctx.backend.rollups.rollup_numeric_attribute(
+            root_part_number=rollup_root,
+            attribute_key=rollup_attribute,
+            include_root=include_root,
+        )
+        show_service_result("Rollup attribute", rollup_result)
+        if rollup_result.get("ok"):
+            st.metric("Total", f"{rollup_result['data']['total']:.4f}")
+            st.dataframe(rollup_result["data"]["breakdown"], use_container_width=True, hide_index=True)
+
+    st.divider()
+    st.subheader("Snapshots")
+    create_col, list_col = st.columns([1, 1.2])
+
+    with create_col:
+        with st.form("snapshot_create_form"):
+            snapshot_root = st.text_input("Snapshot root part", value="A-100")
+            snapshot_label = st.text_input("Snapshot label", placeholder="baseline")
+            deduplicate = st.checkbox("Deduplicate if identical", value=True)
+            submit_snapshot = st.form_submit_button("Create Snapshot")
+
+        if submit_snapshot:
+            create_result = ctx.backend.snapshots.create_snapshot(
+                root_part_number=snapshot_root,
+                label=snapshot_label or None,
+                deduplicate_if_identical=deduplicate,
+            )
+            show_service_result("Create snapshot", create_result, show_data=True)
+
+    with list_col:
+        snapshot_filter = st.text_input("Filter by root part (optional)", key="snapshot_filter")
+        filtered_snapshots = ctx.backend.snapshots.list_snapshots(
+            root_part_number=snapshot_filter or None
+        )
+        if filtered_snapshots.get("ok"):
+            st.dataframe(
+                [
+                    {
+                        "snapshot_id": item["snapshot_id"],
+                        "root_part_number": item["root_part_number"],
+                        "created_at": item["created_at"],
+                        "label": item.get("label"),
+                    }
+                    for item in filtered_snapshots["data"]["snapshots"]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            show_service_result("List snapshots", filtered_snapshots)
+
+    st.divider()
+    st.subheader("Compare Snapshots")
+    latest_snapshots_result = ctx.backend.snapshots.list_snapshots()
+    if latest_snapshots_result.get("ok"):
+        latest_snapshots = latest_snapshots_result["data"]["snapshots"]
+        if len(latest_snapshots) < 2:
+            st.info("Create at least two snapshots to run a diff.")
+        else:
+            snapshot_labels = [
+                f"{item['snapshot_id']} | {item['root_part_number']} | {item['created_at']}"
+                for item in latest_snapshots
+            ]
+            default_a = max(0, len(snapshot_labels) - 2)
+            default_b = max(0, len(snapshot_labels) - 1)
+            selection_a = st.selectbox("Snapshot A", options=snapshot_labels, index=default_a)
+            selection_b = st.selectbox("Snapshot B", options=snapshot_labels, index=default_b)
+
+            map_label_to_id = {
+                label: snapshot["snapshot_id"]
+                for label, snapshot in zip(snapshot_labels, latest_snapshots)
+            }
+            if st.button("Run Snapshot Diff", key="run_snapshot_diff_btn"):
+                compare_result = ctx.backend.diff.compare_snapshots(
+                    map_label_to_id[selection_a],
+                    map_label_to_id[selection_b],
+                )
+                show_service_result("Compare snapshots", compare_result)
+                if compare_result.get("ok"):
+                    data = compare_result["data"]
+                    diff_col_1, diff_col_2, diff_col_3 = st.columns(3)
+                    diff_col_1.metric("Part Changes", len(data["part_changes"]["modified"]))
+                    diff_col_2.metric("Relationship Changes", len(data["relationship_changes"]["modified"]))
+                    diff_col_3.metric("Signatures Equal", "Yes" if data["signature_equal"] else "No")
+                    st.json(data)
+    else:
+        show_service_result("List snapshots", latest_snapshots_result)
