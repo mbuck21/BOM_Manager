@@ -198,7 +198,7 @@ html, body, [class*="css"]  {
 }
 
 [data-testid="stAppViewContainer"] {
-  background: radial-gradient(circle at 15% 20%, #ffffff 0%, var(--bg-soft) 60%);
+  background: radial-gradient(circle at 15% 20%, #111827 0%, var(--bg-soft) 60%);
 }
 
 [data-testid="stSidebar"] {

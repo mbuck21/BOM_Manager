@@ -93,6 +93,10 @@ python3 -m pip install streamlit
 streamlit run streamlit_app.py
 ```
 
+```cmd
+python -m streamlit run streamlit_app.py
+```
+
 The app defaults to `demo_data/` and supports:
 
 - Seeding demo data

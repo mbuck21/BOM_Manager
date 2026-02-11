@@ -1,5 +1,5 @@
 part_number,name,last_updated,weight_kg,material,cost_usd,attributes_json
-A-100,Top Assembly,2026-02-11T18:42:46Z,12.0,Aluminum,,"{""material"": ""Aluminum"", ""weight_kg"": 12.0}"
-B-200,Bracket,2026-02-11T18:42:46Z,1.5,Steel,12.75,"{""cost_usd"": 12.75, ""material"": ""Steel"", ""weight_kg"": 1.5}"
-C-300,Panel,2026-02-11T18:42:46Z,0.8,Composite,,"{""material"": ""Composite"", ""weight_kg"": 0.8}"
-D-400,Fastener Kit,2026-02-11T18:42:46Z,0.05,,,"{""weight_kg"": 0.05}"
+A-100,Top Assembly,2026-02-11T19:09:32Z,12.0,Aluminum,,"{""material"": ""Aluminum"", ""weight_kg"": 12.0}"
+B-200,Bracket,2026-02-11T19:09:32Z,1.5,Steel,12.75,"{""cost_usd"": 12.75, ""material"": ""Steel"", ""weight_kg"": 1.5}"
+C-300,Panel,2026-02-11T19:09:32Z,0.8,Composite,,"{""material"": ""Composite"", ""weight_kg"": 0.8}"
+D-400,Fastener Kit,2026-02-11T19:09:32Z,0.05,,,"{""weight_kg"": 0.05}"
