@@ -83,3 +83,20 @@ No raw exceptions are intended to surface to frontend consumers.
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
+
+## Streamlit Demo Frontend
+
+Run an interactive frontend that uses the same `BOMBackend` services:
+
+```bash
+python3 -m pip install streamlit
+streamlit run streamlit_app.py
+```
+
+The app defaults to `demo_data/` and supports:
+
+- Seeding demo data
+- Part and relationship CRUD operations
+- Subgraph traversal and numeric rollups
+- Snapshot create/list/diff
+- CSV import and export

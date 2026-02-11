@@ -16,7 +16,7 @@
         "find_number": "10"
       },
       "child_part_number": "B-200",
-      "last_updated": "2026-02-11T18:42:46Z",
+      "last_updated": "2026-02-11T19:03:24Z",
       "parent_part_number": "A-100",
       "qty": 2.0,
       "rel_id": "R-A-B-10"
@@ -26,9 +26,9 @@
         "find_number": "30"
       },
       "child_part_number": "C-300",
-      "last_updated": "2026-02-11T18:42:46Z",
+      "last_updated": "2026-02-11T19:03:24Z",
       "parent_part_number": "A-100",
-      "qty": 5.0,
+      "qty": 3.0,
       "rel_id": "R-A-C"
     },
     {
@@ -36,7 +36,7 @@
         "find_number": "40"
       },
       "child_part_number": "D-400",
-      "last_updated": "2026-02-11T18:42:46Z",
+      "last_updated": "2026-02-11T19:03:24Z",
       "parent_part_number": "B-200",
       "qty": 4.0,
       "rel_id": "R-B-D"
