@@ -9,6 +9,10 @@ from streamlit_ui.helpers import parse_csv_whitelist, save_uploaded_csv, show_se
 
 
 def render_csv_tab(ctx: AppContext) -> None:
+    backend = ctx.live_backend
+    if ctx.snapshot_mode:
+        st.info("Snapshot mode is active. CSV import/export operations are running against live data.")
+
     st.subheader("CSV Export")
     export_col_a, export_col_b = st.columns(2)
 
@@ -26,7 +30,7 @@ def render_csv_tab(ctx: AppContext) -> None:
             submit_export_parts = st.form_submit_button("Export Parts CSV")
 
         if submit_export_parts:
-            export_result = ctx.backend.csv.export_parts_csv(
+            export_result = backend.csv.export_parts_csv(
                 csv_path=Path(export_parts_path),
                 attribute_whitelist=parse_csv_whitelist(parts_whitelist_raw),
                 include_attributes_json=parts_include_json,
@@ -47,7 +51,7 @@ def render_csv_tab(ctx: AppContext) -> None:
             submit_export_rels = st.form_submit_button("Export Relationships CSV")
 
         if submit_export_rels:
-            export_result = ctx.backend.csv.export_relationships_csv(
+            export_result = backend.csv.export_relationships_csv(
                 csv_path=Path(export_rels_path),
                 attribute_whitelist=parse_csv_whitelist(rels_whitelist_raw),
                 include_attributes_json=rels_include_json,
@@ -66,7 +70,7 @@ def render_csv_tab(ctx: AppContext) -> None:
                 st.error("Choose a CSV file first.")
             else:
                 csv_path = save_uploaded_csv(ctx.data_dir, "parts", uploaded_parts_csv)
-                import_result = ctx.backend.csv.import_parts_csv(
+                import_result = backend.csv.import_parts_csv(
                     csv_path=csv_path,
                     merge_attributes=merge_parts_attributes,
                 )
@@ -85,7 +89,7 @@ def render_csv_tab(ctx: AppContext) -> None:
                 st.error("Choose a CSV file first.")
             else:
                 csv_path = save_uploaded_csv(ctx.data_dir, "relationships", uploaded_relationships_csv)
-                import_result = ctx.backend.csv.import_relationships_csv(
+                import_result = backend.csv.import_relationships_csv(
                     csv_path=csv_path,
                     allow_dangling=allow_dangling_csv,
                     merge_attributes=merge_rel_csv_attributes,

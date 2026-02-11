@@ -42,6 +42,9 @@ def _opportunity_rows(part_totals: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 
 def render_weight_analysis_tab(ctx: AppContext) -> None:
+    if ctx.snapshot_mode:
+        st.info("Snapshot mode is active. Weight analysis is running against the loaded snapshot data.")
+
     st.subheader("Weight Analysis")
     st.caption(
         "Uses unit-weight override logic: when a node has unit weight, children below that node are "

@@ -7,6 +7,10 @@ from streamlit_ui.helpers import parse_json_object, part_rows, show_service_resu
 
 
 def render_parts_tab(ctx: AppContext) -> None:
+    backend = ctx.live_backend
+    if ctx.snapshot_mode:
+        st.info("Snapshot mode is active. Parts tab edits and searches are running against live data.")
+
     st.subheader("Add or Update Part")
     with st.form("part_upsert_form"):
         part_number = st.text_input("Part number", placeholder="A-100")
@@ -25,7 +29,7 @@ def render_parts_tab(ctx: AppContext) -> None:
         except ValueError as exc:
             st.error(str(exc))
         else:
-            result = ctx.backend.parts.add_or_update_part(
+            result = backend.parts.add_or_update_part(
                 part_number=part_number,
                 name=name,
                 attributes=attributes,
@@ -41,7 +45,7 @@ def render_parts_tab(ctx: AppContext) -> None:
         submit_delete_part = st.form_submit_button("Delete Part")
 
     if submit_delete_part:
-        result = ctx.backend.parts.delete_part(
+        result = backend.parts.delete_part(
             part_number=delete_part_number,
             allow_if_referenced=allow_if_referenced,
         )
@@ -50,7 +54,7 @@ def render_parts_tab(ctx: AppContext) -> None:
     st.divider()
     st.subheader("Search Parts")
     part_query = st.text_input("Search by part number or name", key="part_search_query")
-    query_result = ctx.backend.parts.list_parts(query=part_query or None)
+    query_result = backend.parts.list_parts(query=part_query or None)
     if query_result.get("ok"):
         st.dataframe(
             part_rows(query_result["data"]["parts"]),

@@ -7,7 +7,6 @@ import streamlit as st
 
 from streamlit_ui.context import AppContext
 from streamlit_ui.helpers import show_service_result
-from streamlit_ui.seed import seed_demo_data
 
 
 def _find_default_root(parts: list[dict[str, Any]], relationships: list[dict[str, Any]]) -> str:
@@ -103,20 +102,15 @@ def _direct_child_weight_breakdown(
 
 
 def render_dashboard_tab(ctx: AppContext) -> None:
-    st.subheader("Quick Demo Actions")
-    if st.button("Seed Sample Data", key="seed_demo_data_btn"):
-        for action_name, action_result in seed_demo_data(ctx.backend):
-            show_service_result(action_name, action_result)
-        st.rerun()
-
-    st.divider()
+    if ctx.snapshot_mode:
+        st.caption("Snapshot mode active: analysis uses loaded snapshot data.")
     st.subheader("Interactive Root Breakdown")
 
     if not ctx.parts_result.get("ok"):
         show_service_result("List parts", ctx.parts_result)
         return
     if not ctx.parts:
-        st.info("No parts found. Seed sample data or add parts first.")
+        st.info("No parts found. Add parts first or load a different snapshot.")
         return
 
     part_lookup = {str(item.get("part_number", "")).strip(): item for item in ctx.parts}

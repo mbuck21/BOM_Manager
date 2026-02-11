@@ -7,6 +7,10 @@ from streamlit_ui.helpers import parse_json_object, show_service_result
 
 
 def render_relationships_tab(ctx: AppContext) -> None:
+    backend = ctx.live_backend
+    if ctx.snapshot_mode:
+        st.info("Snapshot mode is active. Relationship edits and lookups are running against live data.")
+
     st.subheader("Add or Update Relationship")
     with st.form("relationship_upsert_form"):
         parent_part_number = st.text_input("Parent part number", value="A-100")
@@ -28,7 +32,7 @@ def render_relationships_tab(ctx: AppContext) -> None:
         except ValueError as exc:
             st.error(str(exc))
         else:
-            result = ctx.backend.bom.add_or_update_relationship(
+            result = backend.bom.add_or_update_relationship(
                 parent_part_number=parent_part_number,
                 child_part_number=child_part_number,
                 qty=qty,
@@ -46,7 +50,7 @@ def render_relationships_tab(ctx: AppContext) -> None:
         submit_delete_relationship = st.form_submit_button("Delete Relationship")
 
     if submit_delete_relationship:
-        result = ctx.backend.bom.delete_relationship(delete_rel_id)
+        result = backend.bom.delete_relationship(delete_rel_id)
         show_service_result("Delete relationship", result, show_data=True)
 
     st.divider()
@@ -55,7 +59,7 @@ def render_relationships_tab(ctx: AppContext) -> None:
     with lookup_col_a:
         lookup_parent = st.text_input("Get children for parent", value="A-100")
         if st.button("Load Children", key="load_children_btn"):
-            children_result = ctx.backend.bom.get_children(lookup_parent)
+            children_result = backend.bom.get_children(lookup_parent)
             show_service_result("Get children", children_result)
             if children_result.get("ok"):
                 rows = []
@@ -74,7 +78,7 @@ def render_relationships_tab(ctx: AppContext) -> None:
     with lookup_col_b:
         lookup_child = st.text_input("Get parents for child", value="B-200")
         if st.button("Load Parents", key="load_parents_btn"):
-            parents_result = ctx.backend.bom.get_parents(lookup_child)
+            parents_result = backend.bom.get_parents(lookup_child)
             show_service_result("Get parents", parents_result)
             if parents_result.get("ok"):
                 rows = []

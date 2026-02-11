@@ -7,10 +7,18 @@ from streamlit_ui.helpers import part_rows, relationship_rows, show_service_resu
 
 
 def render_analysis_tab(ctx: AppContext) -> None:
+    analysis_backend = ctx.backend
+    snapshot_backend = ctx.live_backend
+    if ctx.snapshot_mode:
+        st.info(
+            "Snapshot mode is active. Subgraph/Rollup use the loaded snapshot data; "
+            "snapshot create/list/diff use live snapshot storage."
+        )
+
     st.subheader("Subgraph Explorer")
     root_part_number = st.text_input("Root part number", value="A-100", key="subgraph_root_part")
     if st.button("Load Subgraph", key="load_subgraph_btn"):
-        subgraph_result = ctx.backend.bom.get_subgraph(root_part_number)
+        subgraph_result = analysis_backend.bom.get_subgraph(root_part_number)
         show_service_result("Get subgraph", subgraph_result)
         if subgraph_result.get("ok"):
             st.markdown("**Subgraph Parts**")
@@ -31,7 +39,7 @@ def render_analysis_tab(ctx: AppContext) -> None:
         submit_rollup = st.form_submit_button("Run Rollup")
 
     if submit_rollup:
-        rollup_result = ctx.backend.rollups.rollup_numeric_attribute(
+        rollup_result = analysis_backend.rollups.rollup_numeric_attribute(
             root_part_number=rollup_root,
             attribute_key=rollup_attribute,
             include_root=include_root,
@@ -53,7 +61,7 @@ def render_analysis_tab(ctx: AppContext) -> None:
             submit_snapshot = st.form_submit_button("Create Snapshot")
 
         if submit_snapshot:
-            create_result = ctx.backend.snapshots.create_snapshot(
+            create_result = snapshot_backend.snapshots.create_snapshot(
                 root_part_number=snapshot_root,
                 label=snapshot_label or None,
                 deduplicate_if_identical=deduplicate,
@@ -62,7 +70,7 @@ def render_analysis_tab(ctx: AppContext) -> None:
 
     with list_col:
         snapshot_filter = st.text_input("Filter by root part (optional)", key="snapshot_filter")
-        filtered_snapshots = ctx.backend.snapshots.list_snapshots(
+        filtered_snapshots = snapshot_backend.snapshots.list_snapshots(
             root_part_number=snapshot_filter or None
         )
         if filtered_snapshots.get("ok"):
@@ -84,7 +92,7 @@ def render_analysis_tab(ctx: AppContext) -> None:
 
     st.divider()
     st.subheader("Compare Snapshots")
-    latest_snapshots_result = ctx.backend.snapshots.list_snapshots()
+    latest_snapshots_result = snapshot_backend.snapshots.list_snapshots()
     if latest_snapshots_result.get("ok"):
         latest_snapshots = latest_snapshots_result["data"]["snapshots"]
         if len(latest_snapshots) < 2:
@@ -104,7 +112,7 @@ def render_analysis_tab(ctx: AppContext) -> None:
                 for label, snapshot in zip(snapshot_labels, latest_snapshots)
             }
             if st.button("Run Snapshot Diff", key="run_snapshot_diff_btn"):
-                compare_result = ctx.backend.diff.compare_snapshots(
+                compare_result = snapshot_backend.diff.compare_snapshots(
                     map_label_to_id[selection_a],
                     map_label_to_id[selection_b],
                 )
