@@ -113,6 +113,20 @@ def render_metrics(parts_count: int, relationships_count: int, snapshots_count: 
 
 
 def main() -> None:
+    st.set_page_config(page_title="BOM Manager Demo Frontend", layout="wide")
+    st.markdown(
+        """
+        <style>
+        .main .block-container {
+            max-width: 1600px;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.title("BOM Manager Demo Frontend")
     st.caption("Interactive Streamlit client for parts, relationships, rollups, snapshots, and CSV workflows.")
 
