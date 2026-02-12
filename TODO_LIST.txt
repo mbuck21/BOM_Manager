@@ -27,6 +27,12 @@ Last Updated: 2026-02-11
 
 ## Later
 - [ ] Add charts/filters polish once core flows above are working
+- [ ] fix this warning: 
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-02-11 19:45:32.603 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
 
 ## Done
 - [x] Added weight rollup with unit-weight override + maturity factor in backend
