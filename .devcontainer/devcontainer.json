@@ -1,0 +1,26 @@
+{
+  "name": "BOM Manager",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "postCreateCommand": "make setup",
+  "postAttachCommand": "bash -lc 'if ! pgrep -f \"streamlit run streamlit_app.py\" >/dev/null; then nohup make run >/tmp/streamlit.log 2>&1 & fi'",
+  "forwardPorts": [
+    8501
+  ],
+  "portsAttributes": {
+    "8501": {
+      "label": "Streamlit App",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # BOM Manager Backend
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mbuck21/BOM_Manager)
+
 This project provides a file-backed BOM backend with services for:
 - part catalog CRUD
 - BOM relationship management with cycle prevention
@@ -191,4 +193,27 @@ python3 -m unittest discover -s tests -p "test_*.py"
 ```bash
 python3 -m pip install streamlit
 streamlit run streamlit_app.py
+```
+
+## Run In GitHub Codespaces (No Local Python Setup)
+
+1. Push this repository to GitHub.
+2. Open the repository in your browser.
+3. Click **Code** > **Codespaces** > **Create codespace on main**.
+4. Wait for startup to complete. Dependencies install automatically and Streamlit auto-starts in the background.
+5. Open the forwarded port `8501` when prompted.
+
+Direct URL pattern you can share:
+
+```text
+https://github.com/<owner>/<repo>/codespaces
+```
+
+Useful commands inside Codespaces:
+
+```bash
+make run          # run app in foreground
+make test         # run backend tests
+tail -f /tmp/streamlit.log
+pkill -f "streamlit run streamlit_app.py"  # stop background app
 ```
