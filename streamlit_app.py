@@ -16,7 +16,6 @@ from streamlit_ui.tabs import (
     render_relationships_tab,
     render_weight_analysis_tab,
 )
-from streamlit_ui.theme import configure_page
 
 LIVE_DATA_OPTION = "__live_data__"
 ACTIVE_SNAPSHOT_ID_KEY = "active_snapshot_id"
@@ -114,7 +113,6 @@ def render_metrics(parts_count: int, relationships_count: int, snapshots_count: 
 
 
 def main() -> None:
-    configure_page()
     st.title("BOM Manager Demo Frontend")
     st.caption("Interactive Streamlit client for parts, relationships, rollups, snapshots, and CSV workflows.")
 
