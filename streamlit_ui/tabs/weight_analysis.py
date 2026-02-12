@@ -95,22 +95,22 @@ def render_weight_analysis_tab(ctx: AppContext) -> None:
     metric_col3.metric("Unresolved Nodes", len(data.get("unresolved_nodes", [])))
 
     st.markdown("**Top Contributors**")
-    st.dataframe(data.get("top_contributors", []), use_container_width=True, hide_index=True)
+    st.dataframe(data.get("top_contributors", []), width="stretch", hide_index=True)
 
     st.markdown("**Reduction Opportunity (Simple What-If)**")
     st.dataframe(
         _opportunity_rows(data.get("part_totals", [])),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
     st.markdown("**Path Breakdown**")
     st.dataframe(
         _breakdown_rows(data.get("breakdown", [])),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
     if data.get("unresolved_nodes"):
         st.markdown("**Unresolved Nodes**")
-        st.dataframe(data["unresolved_nodes"], use_container_width=True, hide_index=True)
+        st.dataframe(data["unresolved_nodes"], width="stretch", hide_index=True)

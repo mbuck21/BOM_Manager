@@ -58,7 +58,7 @@ def render_parts_tab(ctx: AppContext) -> None:
     if query_result.get("ok"):
         st.dataframe(
             part_rows(query_result["data"]["parts"]),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     else:

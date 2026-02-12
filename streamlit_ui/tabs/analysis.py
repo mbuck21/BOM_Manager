@@ -22,11 +22,11 @@ def render_analysis_tab(ctx: AppContext) -> None:
         show_service_result("Get subgraph", subgraph_result)
         if subgraph_result.get("ok"):
             st.markdown("**Subgraph Parts**")
-            st.dataframe(part_rows(subgraph_result["data"]["parts"]), use_container_width=True, hide_index=True)
+            st.dataframe(part_rows(subgraph_result["data"]["parts"]), width="stretch", hide_index=True)
             st.markdown("**Subgraph Relationships**")
             st.dataframe(
                 relationship_rows(subgraph_result["data"]["relationships"]),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 
@@ -47,7 +47,7 @@ def render_analysis_tab(ctx: AppContext) -> None:
         show_service_result("Rollup attribute", rollup_result)
         if rollup_result.get("ok"):
             st.metric("Total", f"{rollup_result['data']['total']:.4f}")
-            st.dataframe(rollup_result["data"]["breakdown"], use_container_width=True, hide_index=True)
+            st.dataframe(rollup_result["data"]["breakdown"], width="stretch", hide_index=True)
 
     st.divider()
     st.subheader("Snapshots")
@@ -84,7 +84,7 @@ def render_analysis_tab(ctx: AppContext) -> None:
                     }
                     for item in filtered_snapshots["data"]["snapshots"]
                 ],
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
         else:

@@ -50,7 +50,7 @@ def _child_rows(
                 "qty": float(relationship.get("qty", 0)),
             }
         )
-    rows.sort(key=lambda row: (row["child_part_number"], row["rel_id"] or ""))
+    rows.sort(key=lambda row: (-row["qty"], row["child_part_number"], row["rel_id"] or ""))
     return rows
 
 
@@ -101,10 +101,46 @@ def _direct_child_weight_breakdown(
     return rows, warnings
 
 
+def _rollup_display_rows(
+    rollup_rows: list[dict[str, Any]],
+    total_effective_weight: float,
+    total_maturity_weight: float,
+) -> list[dict[str, Any]]:
+    display_rows: list[dict[str, Any]] = []
+    for row in rollup_rows:
+        effective_weight = float(row["effective_weight"])
+        maturity_added_weight = float(row["maturity_added_weight"])
+        qty = float(row["qty"])
+        display_rows.append(
+            {
+                "part_number": row["part_number"],
+                "name": row["name"],
+                "qty": qty,
+                "effective_weight": effective_weight,
+                "effective_weight_pct": (
+                    (effective_weight / total_effective_weight) * 100.0
+                    if total_effective_weight > 0
+                    else 0.0
+                ),
+                "maturity_added_weight": maturity_added_weight,
+                "maturity_added_pct": (
+                    (maturity_added_weight / total_maturity_weight) * 100.0
+                    if total_maturity_weight > 0
+                    else 0.0
+                ),
+                "unit_effective_weight": (effective_weight / qty) if qty > 0 else 0.0,
+            }
+        )
+    return display_rows
+
+
 def render_dashboard_tab(ctx: AppContext) -> None:
     if ctx.snapshot_mode:
         st.caption("Snapshot mode active: analysis uses loaded snapshot data.")
     st.subheader("Interactive Root Breakdown")
+    st.caption(
+        "Engineer workflow: choose a root, review direct children, and prioritize high-weight branches."
+    )
 
     if not ctx.parts_result.get("ok"):
         show_service_result("List parts", ctx.parts_result)
@@ -122,57 +158,73 @@ def render_dashboard_tab(ctx: AppContext) -> None:
     if st.session_state["dashboard_root_part_number"] not in root_options and root_options:
         st.session_state["dashboard_root_part_number"] = root_options[0]
 
+    selected_root = st.selectbox(
+        "Current root part",
+        options=root_options,
+        index=root_options.index(st.session_state["dashboard_root_part_number"]),
+        key="dashboard_root_selector",
+    )
+    if selected_root != st.session_state["dashboard_root_part_number"]:
+        st.session_state["dashboard_root_part_number"] = selected_root
+        st.rerun()
+
+    root_part_number = st.session_state["dashboard_root_part_number"]
+    root_part = part_lookup.get(root_part_number, {})
+    children = _child_rows(root_part_number, ctx.relationships, part_lookup)
+    total_child_qty = sum(float(child["qty"]) for child in children)
+    rollup_rows: list[dict[str, Any]] = []
+    unique_warnings: list[str] = []
+    if children:
+        rollup_rows, rollup_warnings = _direct_child_weight_breakdown(ctx, root_part_number, children)
+        unique_warnings = list(dict.fromkeys(rollup_warnings))
+
+    st.markdown(f"**Root Context:** `{root_part_number}` | {root_part.get('name', '(missing)')}")
+    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+    summary_col1.metric("Direct Children", len(children))
+    summary_col2.metric("Analyzed Children", len(rollup_rows))
+    summary_col3.metric("Warnings", len(unique_warnings))
+    summary_col4.metric("Total Child Qty", f"{total_child_qty:.3f}")
+
     left_col, right_col = st.columns([1, 2], gap="large")
 
     with left_col:
-        selected_root = st.selectbox(
-            "Current root part",
-            options=root_options,
-            index=root_options.index(st.session_state["dashboard_root_part_number"]),
-            key="dashboard_root_selector",
-        )
-        if selected_root != st.session_state["dashboard_root_part_number"]:
-            st.session_state["dashboard_root_part_number"] = selected_root
-            st.rerun()
-
-        root_part_number = st.session_state["dashboard_root_part_number"]
-        root_part = part_lookup.get(root_part_number, {})
-        st.markdown("**Root Part**")
-        st.dataframe(
-            [
-                {
-                    "part_number": root_part_number,
-                    "name": root_part.get("name", "(missing)"),
-                }
-            ],
-            use_container_width=True,
-            hide_index=True,
-        )
-
-        children = _child_rows(root_part_number, ctx.relationships, part_lookup)
         st.markdown("**Direct Children**")
         if not children:
             st.info("This root has no direct children.")
         else:
-            st.dataframe(children, use_container_width=True, hide_index=True)
-            st.caption("Click a child to make it the new root.")
-            for child in children:
-                button_label = f"{child['child_part_number']} ({child['child_name']})"
-                if st.button(button_label, key=f"dashboard_child_nav_{child['rel_id']}"):
-                    st.session_state["dashboard_root_part_number"] = child["child_part_number"]
-                    st.rerun()
+            st.dataframe(
+                children,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "qty": st.column_config.NumberColumn("qty", format="%.3f"),
+                },
+            )
+            child_target_index = st.selectbox(
+                "Drill into child",
+                options=list(range(len(children))),
+                format_func=lambda index: (
+                    f"{children[index]['child_part_number']} | "
+                    f"{children[index]['child_name']} (qty={children[index]['qty']:.3f})"
+                ),
+                key=f"dashboard_child_target_{root_part_number}",
+            )
+            if st.button("Set child as new root", key=f"dashboard_child_nav_apply_{root_part_number}"):
+                st.session_state["dashboard_root_part_number"] = children[child_target_index][
+                    "child_part_number"
+                ]
+                st.rerun()
 
     with right_col:
-        root_part_number = st.session_state["dashboard_root_part_number"]
-        children = _child_rows(root_part_number, ctx.relationships, part_lookup)
         if not children:
             st.info("No direct children to analyze for this root.")
             return
 
-        rollup_rows, rollup_warnings = _direct_child_weight_breakdown(ctx, root_part_number, children)
-        if rollup_warnings:
-            for warning in rollup_warnings:
-                st.warning(warning)
+        if unique_warnings:
+            st.caption(f"{len(unique_warnings)} warning(s) while computing child rollups.")
+            with st.expander("View warning details", expanded=False):
+                for warning in unique_warnings:
+                    st.markdown(f"- {warning}")
 
         if not rollup_rows:
             st.info("No child weight contributions could be computed.")
@@ -180,33 +232,54 @@ def render_dashboard_tab(ctx: AppContext) -> None:
 
         total_effective_weight = sum(row["effective_weight"] for row in rollup_rows)
         total_maturity_weight = sum(row["maturity_added_weight"] for row in rollup_rows)
+        average_effective_weight = total_effective_weight / len(rollup_rows)
+        display_rows = _rollup_display_rows(
+            rollup_rows=rollup_rows,
+            total_effective_weight=total_effective_weight,
+            total_maturity_weight=total_maturity_weight,
+        )
 
-        metric_col1, metric_col2 = st.columns(2)
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
         metric_col1.metric("Total Effective Weight", f"{total_effective_weight:.4f}")
         metric_col2.metric("Total Maturity Added", f"{total_maturity_weight:.4f}")
+        metric_col3.metric("Avg Child Effective Weight", f"{average_effective_weight:.4f}")
 
         st.markdown(f"**Weight Breakdown for Children of `{root_part_number}`**")
-        st.dataframe(rollup_rows, use_container_width=True, hide_index=True)
-
-        chart_rows = [
-            {"part_number": row["part_number"], "effective_weight": row["effective_weight"]}
-            for row in rollup_rows
-            if row["effective_weight"] > 0
-        ]
-        if chart_rows:
-            st.markdown("**Contribution Pie Chart**")
-            st.vega_lite_chart(
-                chart_rows,
-                {
-                    "mark": {"type": "arc", "outerRadius": 120},
-                    "encoding": {
-                        "theta": {"field": "effective_weight", "type": "quantitative"},
-                        "color": {"field": "part_number", "type": "nominal"},
-                        "tooltip": [
-                            {"field": "part_number", "type": "nominal"},
-                            {"field": "effective_weight", "type": "quantitative", "format": ".4f"},
-                        ],
-                    },
-                },
-                use_container_width=True,
-            )
+        st.dataframe(
+            display_rows,
+            width="stretch",
+            hide_index=True,
+            column_order=[
+                "part_number",
+                "name",
+                "qty",
+                "effective_weight",
+                "effective_weight_pct",
+                "maturity_added_weight",
+                "maturity_added_pct",
+                "unit_effective_weight",
+            ],
+            column_config={
+                "qty": st.column_config.NumberColumn("qty", format="%.3f"),
+                "effective_weight": st.column_config.NumberColumn(
+                    "effective_weight",
+                    format="%.4f",
+                ),
+                "effective_weight_pct": st.column_config.NumberColumn(
+                    "effective_weight_pct",
+                    format="%.2f%%",
+                ),
+                "maturity_added_weight": st.column_config.NumberColumn(
+                    "maturity_added_weight",
+                    format="%.4f",
+                ),
+                "maturity_added_pct": st.column_config.NumberColumn(
+                    "maturity_added_pct",
+                    format="%.2f%%",
+                ),
+                "unit_effective_weight": st.column_config.NumberColumn(
+                    "unit_effective_weight",
+                    format="%.4f",
+                ),
+            },
+        )

@@ -73,7 +73,7 @@ def render_relationships_tab(ctx: AppContext) -> None:
                             "qty": relationship["qty"],
                         }
                     )
-                st.dataframe(rows, use_container_width=True, hide_index=True)
+                st.dataframe(rows, width="stretch", hide_index=True)
 
     with lookup_col_b:
         lookup_child = st.text_input("Get parents for child", value="B-200")
@@ -92,4 +92,4 @@ def render_relationships_tab(ctx: AppContext) -> None:
                             "qty": relationship["qty"],
                         }
                     )
-                st.dataframe(rows, use_container_width=True, hide_index=True)
+                st.dataframe(rows, width="stretch", hide_index=True)
