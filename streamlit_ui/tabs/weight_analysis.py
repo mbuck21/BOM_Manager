@@ -41,10 +41,11 @@ def _opportunity_rows(part_totals: list[dict[str, Any]]) -> list[dict[str, Any]]
     return rows
 
 
-def render_weight_analysis_tab(ctx: AppContext) -> None:
+def render_weight_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
     if ctx.snapshot_mode:
         st.info("Snapshot mode is active. Weight analysis is running against the loaded snapshot data.")
 
+    selected_root = root_part_number.strip()
     st.subheader("Weight Analysis")
     st.caption(
         "Uses unit-weight override logic: when a node has unit weight, children below that node are "
@@ -52,7 +53,7 @@ def render_weight_analysis_tab(ctx: AppContext) -> None:
     )
 
     with st.form("weight_analysis_form"):
-        root_part_number = st.text_input("Root part", value="A-100")
+        st.caption(f"Root from sidebar: `{selected_root or '(none selected)'}`")
         unit_weight_key = st.text_input("Unit weight attribute key", value="unit_weight")
         maturity_factor_key = st.text_input("Maturity factor attribute key", value="maturity_factor")
         default_maturity_factor = st.number_input(
@@ -69,13 +70,13 @@ def render_weight_analysis_tab(ctx: AppContext) -> None:
             value=10,
             step=1,
         )
-        submit = st.form_submit_button("Run Weight Analysis")
+        submit = st.form_submit_button("Run Weight Analysis", disabled=not selected_root)
 
     if not submit:
         return
 
     result = ctx.backend.rollups.rollup_weight_with_maturity(
-        root_part_number=root_part_number,
+        root_part_number=selected_root,
         unit_weight_key=unit_weight_key,
         maturity_factor_key=maturity_factor_key,
         default_maturity_factor=default_maturity_factor,

@@ -1,34 +1,11 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any
 
 import streamlit as st
 
 from streamlit_ui.context import AppContext
 from streamlit_ui.helpers import show_service_result
-
-
-def _find_default_root(parts: list[dict[str, Any]], relationships: list[dict[str, Any]]) -> str:
-    indegree: dict[str, int] = defaultdict(int)
-    nodes: set[str] = set()
-    for relationship in relationships:
-        parent = str(relationship.get("parent_part_number", "")).strip()
-        child = str(relationship.get("child_part_number", "")).strip()
-        if not parent or not child:
-            continue
-        nodes.add(parent)
-        nodes.add(child)
-        indegree[parent] += 0
-        indegree[child] += 1
-
-    root_candidates = sorted(node for node in nodes if indegree.get(node, 0) == 0)
-    if root_candidates:
-        return root_candidates[0]
-
-    if parts:
-        return str(parts[0].get("part_number", "")).strip()
-    return ""
 
 
 def _child_rows(
@@ -140,7 +117,11 @@ def _chart_label(part_number: str, name: str) -> str:
     return f"{part_number} | {clean_name}"
 
 
-def render_dashboard_tab(ctx: AppContext) -> None:
+def render_dashboard_tab(
+    ctx: AppContext,
+    root_part_number: str,
+    root_state_key: str = "universal_root_part_number",
+) -> None:
     if ctx.snapshot_mode:
         st.caption("Snapshot mode active: analysis uses loaded snapshot data.")
     st.subheader("Interactive Root Breakdown")
@@ -156,25 +137,18 @@ def render_dashboard_tab(ctx: AppContext) -> None:
         return
 
     part_lookup = {str(item.get("part_number", "")).strip(): item for item in ctx.parts}
-    default_root = _find_default_root(ctx.parts, ctx.relationships)
-    if "dashboard_root_part_number" not in st.session_state:
-        st.session_state["dashboard_root_part_number"] = default_root
-
     root_options = sorted(part_lookup.keys())
-    if st.session_state["dashboard_root_part_number"] not in root_options and root_options:
-        st.session_state["dashboard_root_part_number"] = root_options[0]
+    if root_part_number not in root_options and root_options:
+        fallback_root = root_options[0]
+        st.info(
+            "The selected root is not available in the loaded dataset. "
+            f"Falling back to `{fallback_root}`."
+        )
+        root_part_number = fallback_root
+        if st.session_state.get(root_state_key) != fallback_root:
+            st.session_state[root_state_key] = fallback_root
+            st.rerun()
 
-    selected_root = st.selectbox(
-        "Current root part",
-        options=root_options,
-        index=root_options.index(st.session_state["dashboard_root_part_number"]),
-        key="dashboard_root_selector",
-    )
-    if selected_root != st.session_state["dashboard_root_part_number"]:
-        st.session_state["dashboard_root_part_number"] = selected_root
-        st.rerun()
-
-    root_part_number = st.session_state["dashboard_root_part_number"]
     root_part = part_lookup.get(root_part_number, {})
     children = _child_rows(root_part_number, ctx.relationships, part_lookup)
     total_child_qty = sum(float(child["qty"]) for child in children)
@@ -252,9 +226,7 @@ def render_dashboard_tab(ctx: AppContext) -> None:
                 key=f"dashboard_child_target_{root_part_number}",
             )
             if st.button("Set child as new root", key=f"dashboard_child_nav_apply_{root_part_number}"):
-                st.session_state["dashboard_root_part_number"] = visible_children[child_target_index][
-                    "child_part_number"
-                ]
+                st.session_state[root_state_key] = visible_children[child_target_index]["child_part_number"]
                 st.rerun()
 
     with right_col:
