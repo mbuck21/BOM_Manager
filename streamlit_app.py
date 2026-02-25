@@ -335,22 +335,22 @@ def main() -> None:
 
 
     (
-        tab_data_snapshot,
         tab_dashboard,
+        tab_data_snapshot,
         tab_parts,
         tab_relationships,
         tab_analysis,
         tab_weight,
         tab_csv,
     ) = st.tabs(
-        ["Data & Snapshots", "Dashboard", "Parts", "Relationships", "Analysis", "Weight Analysis", "CSV"]
+        ["Dashboard", "Data & Snapshots", "Parts", "Relationships", "Analysis", "Weight Analysis", "CSV"]
     )
-
-    with tab_data_snapshot:
-        render_data_snapshot_tab(ctx)
 
     with tab_dashboard:
         render_dashboard_tab(ctx, root_part_number=universal_root, root_state_key=UNIVERSAL_ROOT_PART_KEY)
+    
+    with tab_data_snapshot:
+        render_data_snapshot_tab(ctx)
 
     with tab_parts:
         render_parts_tab(ctx)

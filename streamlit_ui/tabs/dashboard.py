@@ -182,12 +182,7 @@ def render_dashboard_tab(
             if effective_weight is None or effective_weight > 0:
                 visible_children.append(child)
 
-    st.markdown(f"**Root Context:** `{root_part_number}` | {root_part.get('name', '(missing)')}")
-    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
-    summary_col1.metric("Direct Children", f"{len(visible_children)}/{len(children)}")
-    summary_col2.metric("Analyzed Children", f"{len(visible_rollup_rows)}/{len(rollup_rows)}")
-    summary_col3.metric("Warnings", len(unique_warnings))
-    summary_col4.metric("Total Child Qty", f"{total_child_qty:.3f}")
+
 
    
 
@@ -195,12 +190,6 @@ def render_dashboard_tab(
     if not children:
         st.info("No direct children to analyze for this root.")
         return
-
-    if unique_warnings:
-        st.caption(f"{len(unique_warnings)} warning(s) while computing child rollups.")
-        with st.expander("View warning details", expanded=False):
-            for warning in unique_warnings:
-                st.markdown(f"- {warning}")
 
     if not rollup_rows:
         st.info("No child weight contributions could be computed.")
@@ -270,7 +259,7 @@ def render_dashboard_tab(
             {
                 "part_number": row["part_number"],
                 "name": row["name"],
-                "part_label": _chart_label(row["part_number"], row["name"]),
+                "part_label": row["name"],
                 "effective_weight": row["effective_weight"],
                 "effective_weight_pct": row["effective_weight_pct"],
                 "maturity_added_weight": row["maturity_added_weight"],
@@ -284,35 +273,70 @@ def render_dashboard_tab(
             "mark": {"type": "bar", "cornerRadiusEnd": 3},
             "height": min(700, max(220, 36 * len(chart_rows))),
             "encoding": {
+                # -----------------------------------------------------------------
+                # Y‑axis (the part label) – add an explicit axis config so the text
+                # is never clipped.
+                # -----------------------------------------------------------------
                 "y": {
                     "field": "part_label",
                     "type": "nominal",
                     "sort": "-x",
                     "title": "Child Part",
+                    "axis": {
+                        # Keep the text horizontal (change to -45/45 if you want slant)
+                        "labelAngle": 0,
+                        # Optional: give a tiny padding so the text isn’t right‑against the axis
+                        "labelPadding": 4
+                    }
                 },
+
+                # -----------------------------------------------------------------
+                # X‑axis (the metric you are plotting)
+                # -----------------------------------------------------------------
                 "x": {
                     "field": chart_field,
                     "type": "quantitative",
                     "title": chart_title,
                 },
+
+                # -----------------------------------------------------------------
+                # Colour encoding – contribution %
+                # -----------------------------------------------------------------
                 "color": {
                     "field": chart_pct_field,
                     "type": "quantitative",
                     "title": "Contribution %",
                     "scale": {"scheme": "blues"},
                 },
+
+                # -----------------------------------------------------------------
+                # Tooltip – keep everything you already defined
+                # -----------------------------------------------------------------
                 "tooltip": [
                     {"field": "part_number", "type": "nominal"},
                     {"field": "name", "type": "nominal"},
-                    {"field": "effective_weight", "type": "quantitative", "format": ".4f"},
-                    {"field": "effective_weight_pct", "type": "quantitative", "format": ".2f"},
-                    {"field": "maturity_added_weight", "type": "quantitative", "format": ".4f"},
+                    {"field": "effective_weight", "type": "quantitative", "format": ",.0f"},
+                    {"field": "effective_weight_pct", "type": "quantitative", "format": ".0f"},
+                    {"field": "maturity_added_weight", "type": "quantitative", "format": ",.0f"},
                     {"field": "maturity_added_pct", "type": "quantitative", "format": ".2f"},
                 ],
             },
+            # -----------------------------------------------------------------
+            # (Optional) Global config – you can also set a default for all axes
+            # -----------------------------------------------------------------
+            "config": {
+                "axisY": {"minExtent": 300},
+                "axis": {
+                    # This is a safety‑net; the explicit axis config above will
+                    # override it for the y‑axis, but it prevents other axes
+                    # elsewhere in the spec from being truncated.
+                    "labelLimit": None,
+                }
+            }
         },
         width="stretch",
     )
+
 
     st.markdown(f"**Weight Breakdown for Children of `{root_part_number}`**")
     st.dataframe(
@@ -348,3 +372,17 @@ def render_dashboard_tab(
             ),
         },
     )
+
+        
+    st.divider()
+    st.subheader("Root Context Debug")
+    st.markdown(f"**Root Context:** `{root_part_number}` | {root_part.get('name', '(missing)')}")
+    summary_col1, summary_col2, summary_col3 = st.columns(3)
+    summary_col1.metric("Direct Children", f"{len(visible_children)}/{len(children)}")
+    summary_col2.metric("Analyzed Children", f"{len(visible_rollup_rows)}/{len(rollup_rows)}")
+    summary_col3.metric("Warnings", len(unique_warnings))
+    if unique_warnings:
+        st.caption(f"{len(unique_warnings)} warning(s) while computing child rollups.")
+        with st.expander("View warning details", expanded=False):
+            for warning in unique_warnings:
+                st.markdown(f"- {warning}")
