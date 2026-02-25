@@ -1,0 +1,528 @@
+{
+  "created_at": "2026-02-25T15:15:03Z",
+  "label": "Fixed Foward Column CCA",
+  "parts": [
+    {
+      "attributes": {
+        "maturity_factor": 1,
+        "unit_weight": 2.26
+      },
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "CCA - FILTER CIRCULATOR, ODD",
+      "part_number": "20547110-1"
+    },
+    {
+      "attributes": {
+        "maturity_factor": 1,
+        "unit_weight": 2.26
+      },
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "CCA - FILTER CIRCULATOR, EVEN",
+      "part_number": "20547110-2"
+    },
+    {
+      "attributes": {
+        "maturity_factor": 1,
+        "unit_weight": 2.26
+      },
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "CCA - FILTER CIRCULATOR, EVEN CAL",
+      "part_number": "20547110-4"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "SLEEVE",
+      "part_number": "20549098-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-10"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-11"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "JUMPER, COOLANT",
+      "part_number": "20553796-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "FLOW RESTRICTOR",
+      "part_number": "20553797-1"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:11Z",
+      "name": "FORWARD COLUMN GROUP",
+      "part_number": "20553840"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-501"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-502"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-503"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-504"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:11Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-505"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:11Z",
+      "name": "COLUMN ASSEMBLY, FORWARD",
+      "part_number": "20553840-506"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-30"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-31"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLDPLATE CAP, FORWARD COLUMN",
+      "part_number": "20553843-34"
+    },
+    {
+      "attributes": {},
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLDPLATE CAP, FORWARD COLUMN",
+      "part_number": "20553843-35"
+    },
+    {
+      "attributes": {
+        "maturity_factor": 1.1,
+        "unit_weight": 31.6
+      },
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-501"
+    },
+    {
+      "attributes": {
+        "maturity_factor": 1.1,
+        "unit_weight": 31.6
+      },
+      "last_updated": "2026-02-12T00:39:09Z",
+      "name": "COLDPLATE, FORWARD COLUMN",
+      "part_number": "20553843-502"
+    }
+  ],
+  "relationships": [
+    {
+      "attributes": {},
+      "child_part_number": "20549098-1",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553796-501",
+      "qty": 1.0,
+      "rel_id": "20553796-501_20549098-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-10",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553796-501",
+      "qty": 1.0,
+      "rel_id": "20553796-501_20553796-10"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553797-1",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553796-501",
+      "qty": 1.0,
+      "rel_id": "20553796-501_20553797-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-11",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553796-502",
+      "qty": 1.0,
+      "rel_id": "20553796-502_20553796-11"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553840-501",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553840",
+      "qty": 10.0,
+      "rel_id": "20553840_20553840-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553840-502",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553840",
+      "qty": 10.0,
+      "rel_id": "20553840_20553840-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553840-503",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553840",
+      "qty": 6.0,
+      "rel_id": "20553840_20553840-503"
+    },
+    {
+      "attributes": {
+        "find_number": "10"
+      },
+      "child_part_number": "20553840-504",
+      "last_updated": "2026-02-25T14:44:38Z",
+      "parent_part_number": "20553840",
+      "qty": 6.0,
+      "rel_id": "rel_fbbf3d2d3867"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553840-505",
+      "last_updated": "2026-02-11T20:05:36Z",
+      "parent_part_number": "20553840",
+      "qty": 4.0,
+      "rel_id": "20553840_20553840-505"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553840-506",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840",
+      "qty": 4.0,
+      "rel_id": "20553840_20553840-506"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-1",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-501",
+      "qty": 20.0,
+      "rel_id": "20553840-501_20547110-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-2",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-501",
+      "qty": 20.0,
+      "rel_id": "20553840-501_20547110-2"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-501",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-501",
+      "qty": 1.0,
+      "rel_id": "20553840-501_20553796-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-502",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-501",
+      "qty": 1.0,
+      "rel_id": "20553840-501_20553796-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-501",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-501",
+      "qty": 1.0,
+      "rel_id": "20553840-501_20553843-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-1",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-502",
+      "qty": 20.0,
+      "rel_id": "20553840-502_20547110-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-4",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-502",
+      "qty": 20.0,
+      "rel_id": "20553840-502_20547110-4"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-501",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-502",
+      "qty": 1.0,
+      "rel_id": "20553840-502_20553796-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-502",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-502",
+      "qty": 1.0,
+      "rel_id": "20553840-502_20553796-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-502",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-502",
+      "qty": 1.0,
+      "rel_id": "20553840-502_20553843-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-1",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-503",
+      "qty": 16.0,
+      "rel_id": "20553840-503_20547110-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-2",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-503",
+      "qty": 16.0,
+      "rel_id": "20553840-503_20547110-2"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-501",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-503",
+      "qty": 1.0,
+      "rel_id": "20553840-503_20553796-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-502",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-503",
+      "qty": 1.0,
+      "rel_id": "20553840-503_20553796-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-501",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-503",
+      "qty": 1.0,
+      "rel_id": "20553840-503_20553843-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-1",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-504",
+      "qty": 16.0,
+      "rel_id": "20553840-504_20547110-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-4",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-504",
+      "qty": 16.0,
+      "rel_id": "20553840-504_20547110-4"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-501",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-504",
+      "qty": 1.0,
+      "rel_id": "20553840-504_20553796-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-502",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-504",
+      "qty": 1.0,
+      "rel_id": "20553840-504_20553796-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-502",
+      "last_updated": "2026-02-11T19:57:29Z",
+      "parent_part_number": "20553840-504",
+      "qty": 1.0,
+      "rel_id": "20553840-504_20553843-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-1",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-505",
+      "qty": 8.0,
+      "rel_id": "20553840-505_20547110-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-2",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-505",
+      "qty": 8.0,
+      "rel_id": "20553840-505_20547110-2"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-501",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-505",
+      "qty": 1.0,
+      "rel_id": "20553840-505_20553796-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-502",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-505",
+      "qty": 1.0,
+      "rel_id": "20553840-505_20553796-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-501",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-505",
+      "qty": 1.0,
+      "rel_id": "20553840-505_20553843-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-1",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-506",
+      "qty": 8.0,
+      "rel_id": "20553840-506_20547110-1"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20547110-4",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-506",
+      "qty": 8.0,
+      "rel_id": "20553840-506_20547110-4"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-501",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-506",
+      "qty": 1.0,
+      "rel_id": "20553840-506_20553796-501"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553796-502",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-506",
+      "qty": 1.0,
+      "rel_id": "20553840-506_20553796-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-502",
+      "last_updated": "2026-02-11T19:57:30Z",
+      "parent_part_number": "20553840-506",
+      "qty": 1.0,
+      "rel_id": "20553840-506_20553843-502"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-30",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553843-501",
+      "qty": 1.0,
+      "rel_id": "20553843-501_20553843-30"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-34",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553843-501",
+      "qty": 1.0,
+      "rel_id": "20553843-501_20553843-34"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-35",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553843-501",
+      "qty": 2.0,
+      "rel_id": "20553843-501_20553843-35"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-31",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553843-502",
+      "qty": 1.0,
+      "rel_id": "20553843-502_20553843-31"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-34",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553843-502",
+      "qty": 1.0,
+      "rel_id": "20553843-502_20553843-34"
+    },
+    {
+      "attributes": {},
+      "child_part_number": "20553843-35",
+      "last_updated": "2026-02-11T19:57:27Z",
+      "parent_part_number": "20553843-502",
+      "qty": 2.0,
+      "rel_id": "20553843-502_20553843-35"
+    }
+  ],
+  "root_part_number": "20553840",
+  "signature": "875b0425b711e37a524e70ccb3d57524e4459d7e6f0e67daf0f408206df5ad01",
+  "snapshot_id": "snap_20260225_151503_7cec73e2"
+}

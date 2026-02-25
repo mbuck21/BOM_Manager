@@ -285,7 +285,7 @@ def render_metrics(parts_count: int, relationships_count: int, snapshots_count: 
 
 
 def main() -> None:
-    st.set_page_config(page_title="BOM Manager Demo Frontend", layout="wide")
+    st.set_page_config(page_title="Mass Allocation Tracking Tool", layout="wide")
     st.markdown(
         """
         <style>
@@ -299,8 +299,8 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    st.title("BOM Manager Demo Frontend")
-    st.caption("Interactive Streamlit client for parts, relationships, rollups, snapshots, and CSV workflows.")
+    st.title("Mass Allocation Tracking Tool")
+    st.caption("Interactive Tool for Mass Roll up, parts, relationships, and snapshots.")
 
     if DATA_DIR_KEY not in st.session_state:
         st.session_state[DATA_DIR_KEY] = "demo_data"
