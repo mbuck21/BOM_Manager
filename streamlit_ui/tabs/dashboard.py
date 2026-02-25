@@ -189,200 +189,162 @@ def render_dashboard_tab(
     summary_col3.metric("Warnings", len(unique_warnings))
     summary_col4.metric("Total Child Qty", f"{total_child_qty:.3f}")
 
-    left_col, right_col = st.columns([1, 2], gap="large")
+   
 
-    with left_col:
-        st.markdown("**Direct Children**")
-        if not children:
-            st.info("This root has no direct children.")
-        elif not visible_children:
-            st.info(
-                "All children are hidden by the zero-weight filter. Disable the filter to view all children."
-            )
-        else:
-            children_table_rows = [
-                {
-                    "child_part_number": child["child_part_number"],
-                    "child_name": child["child_name"],
-                    "qty": child["qty"],
-                }
-                for child in visible_children
-            ]
-            st.dataframe(
-                children_table_rows,
-                width="stretch",
-                hide_index=True,
-                column_config={
-                    "qty": st.column_config.NumberColumn("qty", format="%.3f"),
-                },
-            )
-            child_target_index = st.selectbox(
-                "Drill into child",
-                options=list(range(len(visible_children))),
-                format_func=lambda index: (
-                    f"{visible_children[index]['child_part_number']} | "
-                    f"{visible_children[index]['child_name']} (qty={visible_children[index]['qty']:.3f})"
-                ),
-                key=f"dashboard_child_target_{root_part_number}",
-            )
-            if st.button("Set child as new root", key=f"dashboard_child_nav_apply_{root_part_number}"):
-                st.session_state[root_state_key] = visible_children[child_target_index]["child_part_number"]
-                st.rerun()
 
-    with right_col:
-        if not children:
-            st.info("No direct children to analyze for this root.")
-            return
+    if not children:
+        st.info("No direct children to analyze for this root.")
+        return
 
-        if unique_warnings:
-            st.caption(f"{len(unique_warnings)} warning(s) while computing child rollups.")
-            with st.expander("View warning details", expanded=False):
-                for warning in unique_warnings:
-                    st.markdown(f"- {warning}")
+    if unique_warnings:
+        st.caption(f"{len(unique_warnings)} warning(s) while computing child rollups.")
+        with st.expander("View warning details", expanded=False):
+            for warning in unique_warnings:
+                st.markdown(f"- {warning}")
 
-        if not rollup_rows:
-            st.info("No child weight contributions could be computed.")
-            return
+    if not rollup_rows:
+        st.info("No child weight contributions could be computed.")
+        return
 
-        total_effective_weight = sum(row["effective_weight"] for row in rollup_rows)
-        total_maturity_weight = sum(row["maturity_added_weight"] for row in rollup_rows)
-        if hide_zero_weight and not visible_rollup_rows:
-            st.info(
-                "No non-zero child weight contributions to display. Disable the filter to view all children."
-            )
-            return
+    total_effective_weight = sum(row["effective_weight"] for row in rollup_rows)
+    total_maturity_weight = sum(row["maturity_added_weight"] for row in rollup_rows)
+    if hide_zero_weight and not visible_rollup_rows:
+        st.info(
+            "No non-zero child weight contributions to display. Disable the filter to view all children."
+        )
+        return
 
-        average_effective_weight = total_effective_weight / len(rollup_rows)
-        display_rows = _rollup_display_rows(
-            rollup_rows=visible_rollup_rows,
-            total_effective_weight=total_effective_weight,
-            total_maturity_weight=total_maturity_weight,
+    average_effective_weight = total_effective_weight / len(rollup_rows)
+    display_rows = _rollup_display_rows(
+        rollup_rows=visible_rollup_rows,
+        total_effective_weight=total_effective_weight,
+        total_maturity_weight=total_maturity_weight,
+    )
+
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    metric_col1.metric("Total Effective Weight", f"{total_effective_weight:.4f}")
+    metric_col2.metric("Total Maturity Added", f"{total_maturity_weight:.4f}")
+    metric_col3.metric("Avg Child Effective Weight", f"{average_effective_weight:.4f}")
+
+    st.markdown("**Contribution Visual**")
+    visual_col1, visual_col2 = st.columns([3, 2])
+    with visual_col1:
+        visual_metric = st.radio(
+            "Visual metric",
+            options=["Effective Weight", "Maturity Added Weight"],
+            horizontal=True,
+            key=f"dashboard_visual_metric_{root_part_number}",
+        )
+    with visual_col2:
+        visual_limit = st.number_input(
+            "Children shown",
+            min_value=1,
+            max_value=len(display_rows),
+            value=min(12, len(display_rows)),
+            step=1,
+            key=f"dashboard_visual_limit_{root_part_number}",
         )
 
-        metric_col1, metric_col2, metric_col3 = st.columns(3)
-        metric_col1.metric("Total Effective Weight", f"{total_effective_weight:.4f}")
-        metric_col2.metric("Total Maturity Added", f"{total_maturity_weight:.4f}")
-        metric_col3.metric("Avg Child Effective Weight", f"{average_effective_weight:.4f}")
-
-        st.markdown("**Contribution Visual**")
-        visual_col1, visual_col2 = st.columns([3, 2])
-        with visual_col1:
-            visual_metric = st.radio(
-                "Visual metric",
-                options=["Effective Weight", "Maturity Added Weight"],
-                horizontal=True,
-                key=f"dashboard_visual_metric_{root_part_number}",
-            )
-        with visual_col2:
-            visual_limit = st.number_input(
-                "Children shown",
-                min_value=1,
-                max_value=len(display_rows),
-                value=min(12, len(display_rows)),
-                step=1,
-                key=f"dashboard_visual_limit_{root_part_number}",
-            )
-
-        if visual_metric == "Maturity Added Weight":
-            chart_field = "maturity_added_weight"
-            chart_pct_field = "maturity_added_pct"
-            chart_title = "Maturity Added Weight"
-            sorted_rows = sorted(
-                display_rows,
-                key=lambda row: float(row["maturity_added_weight"]),
-                reverse=True,
-            )
-        else:
-            chart_field = "effective_weight"
-            chart_pct_field = "effective_weight_pct"
-            chart_title = "Effective Weight"
-            sorted_rows = sorted(
-                display_rows,
-                key=lambda row: float(row["effective_weight"]),
-                reverse=True,
-            )
-
-        chart_rows = []
-        for row in sorted_rows[: int(visual_limit)]:
-            chart_rows.append(
-                {
-                    "part_number": row["part_number"],
-                    "name": row["name"],
-                    "part_label": _chart_label(row["part_number"], row["name"]),
-                    "effective_weight": row["effective_weight"],
-                    "effective_weight_pct": row["effective_weight_pct"],
-                    "maturity_added_weight": row["maturity_added_weight"],
-                    "maturity_added_pct": row["maturity_added_pct"],
-                }
-            )
-
-        st.vega_lite_chart(
-            chart_rows,
-            {
-                "mark": {"type": "bar", "cornerRadiusEnd": 3},
-                "height": min(700, max(220, 36 * len(chart_rows))),
-                "encoding": {
-                    "y": {
-                        "field": "part_label",
-                        "type": "nominal",
-                        "sort": "-x",
-                        "title": "Child Part",
-                    },
-                    "x": {
-                        "field": chart_field,
-                        "type": "quantitative",
-                        "title": chart_title,
-                    },
-                    "color": {
-                        "field": chart_pct_field,
-                        "type": "quantitative",
-                        "title": "Contribution %",
-                        "scale": {"scheme": "blues"},
-                    },
-                    "tooltip": [
-                        {"field": "part_number", "type": "nominal"},
-                        {"field": "name", "type": "nominal"},
-                        {"field": "effective_weight", "type": "quantitative", "format": ".4f"},
-                        {"field": "effective_weight_pct", "type": "quantitative", "format": ".2f"},
-                        {"field": "maturity_added_weight", "type": "quantitative", "format": ".4f"},
-                        {"field": "maturity_added_pct", "type": "quantitative", "format": ".2f"},
-                    ],
-                },
-            },
-            width="stretch",
-        )
-
-        st.markdown(f"**Weight Breakdown for Children of `{root_part_number}`**")
-        st.dataframe(
+    if visual_metric == "Maturity Added Weight":
+        chart_field = "maturity_added_weight"
+        chart_pct_field = "maturity_added_pct"
+        chart_title = "Maturity Added Weight"
+        sorted_rows = sorted(
             display_rows,
-            width="stretch",
-            hide_index=True,
-            column_order=[
-                "part_number",
-                "name",
-                "qty",
-                "effective_weight",
-                "effective_weight_pct",
-                "maturity_added_weight",
-                "maturity_added_pct",
-            ],
-            column_config={
-                "qty": st.column_config.NumberColumn("qty", format="%.3f"),
-                "effective_weight": st.column_config.NumberColumn(
-                    "effective_weight",
-                    format="%.4f",
-                ),
-                "effective_weight_pct": st.column_config.NumberColumn(
-                    "effective_weight_pct",
-                    format="%.2f%%",
-                ),
-                "maturity_added_weight": st.column_config.NumberColumn(
-                    "maturity_added_weight",
-                    format="%.4f",
-                ),
-                "maturity_added_pct": st.column_config.NumberColumn(
-                    "maturity_added_pct",
-                    format="%.2f%%",
-                ),
-            },
+            key=lambda row: float(row["maturity_added_weight"]),
+            reverse=True,
         )
+    else:
+        chart_field = "effective_weight"
+        chart_pct_field = "effective_weight_pct"
+        chart_title = "Effective Weight"
+        sorted_rows = sorted(
+            display_rows,
+            key=lambda row: float(row["effective_weight"]),
+            reverse=True,
+        )
+
+    chart_rows = []
+    for row in sorted_rows[: int(visual_limit)]:
+        chart_rows.append(
+            {
+                "part_number": row["part_number"],
+                "name": row["name"],
+                "part_label": _chart_label(row["part_number"], row["name"]),
+                "effective_weight": row["effective_weight"],
+                "effective_weight_pct": row["effective_weight_pct"],
+                "maturity_added_weight": row["maturity_added_weight"],
+                "maturity_added_pct": row["maturity_added_pct"],
+            }
+        )
+
+    st.vega_lite_chart(
+        chart_rows,
+        {
+            "mark": {"type": "bar", "cornerRadiusEnd": 3},
+            "height": min(700, max(220, 36 * len(chart_rows))),
+            "encoding": {
+                "y": {
+                    "field": "part_label",
+                    "type": "nominal",
+                    "sort": "-x",
+                    "title": "Child Part",
+                },
+                "x": {
+                    "field": chart_field,
+                    "type": "quantitative",
+                    "title": chart_title,
+                },
+                "color": {
+                    "field": chart_pct_field,
+                    "type": "quantitative",
+                    "title": "Contribution %",
+                    "scale": {"scheme": "blues"},
+                },
+                "tooltip": [
+                    {"field": "part_number", "type": "nominal"},
+                    {"field": "name", "type": "nominal"},
+                    {"field": "effective_weight", "type": "quantitative", "format": ".4f"},
+                    {"field": "effective_weight_pct", "type": "quantitative", "format": ".2f"},
+                    {"field": "maturity_added_weight", "type": "quantitative", "format": ".4f"},
+                    {"field": "maturity_added_pct", "type": "quantitative", "format": ".2f"},
+                ],
+            },
+        },
+        width="stretch",
+    )
+
+    st.markdown(f"**Weight Breakdown for Children of `{root_part_number}`**")
+    st.dataframe(
+        display_rows,
+        width="stretch",
+        hide_index=True,
+        column_order=[
+            "part_number",
+            "name",
+            "qty",
+            "effective_weight",
+            "effective_weight_pct",
+            "maturity_added_weight",
+            "maturity_added_pct",
+        ],
+        column_config={
+            "qty": st.column_config.NumberColumn("qty", format="%.3f"),
+            "effective_weight": st.column_config.NumberColumn(
+                "effective_weight",
+                format="%.4f",
+            ),
+            "effective_weight_pct": st.column_config.NumberColumn(
+                "effective_weight_pct",
+                format="%.2f%%",
+            ),
+            "maturity_added_weight": st.column_config.NumberColumn(
+                "maturity_added_weight",
+                format="%.4f",
+            ),
+            "maturity_added_pct": st.column_config.NumberColumn(
+                "maturity_added_pct",
+                format="%.2f%%",
+            ),
+        },
+    )

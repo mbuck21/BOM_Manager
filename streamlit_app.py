@@ -330,21 +330,9 @@ def main() -> None:
 
     universal_root = render_root_sidebar(ctx)
 
-    if ctx.loaded_snapshot_id:
-        latest_flag = "Yes" if ctx.is_latest_snapshot_loaded else "No"
-        st.caption(f"Loaded snapshot: `{ctx.loaded_snapshot_id}` | Is latest: `{latest_flag}`")
-    else:
-        st.caption("Loaded snapshot: `None (live data)`")
-    if universal_root:
-        st.caption(f"Universal root part: `{universal_root}`")
-    else:
-        st.caption("Universal root part: `None`")
 
-    render_metrics(
-        parts_count=len(ctx.parts),
-        relationships_count=len(ctx.relationships),
-        snapshots_count=len(ctx.snapshots),
-    )
+
+
 
     (
         tab_data_snapshot,
@@ -378,6 +366,25 @@ def main() -> None:
 
     with tab_csv:
         render_csv_tab(ctx)
+
+    st.divider()
+    st.subheader("Debug Metrics")
+
+    render_metrics(
+        parts_count=len(ctx.parts),
+        relationships_count=len(ctx.relationships),
+        snapshots_count=len(ctx.snapshots),
+    )
+
+    if ctx.loaded_snapshot_id:
+        latest_flag = "Yes" if ctx.is_latest_snapshot_loaded else "No"
+        st.caption(f"Loaded snapshot: `{ctx.loaded_snapshot_id}` | Is latest: `{latest_flag}`")
+    else:
+        st.caption("Loaded snapshot: `None (live data)`")
+    if universal_root:
+        st.caption(f"Universal root part: `{universal_root}`")
+    else:
+        st.caption("Universal root part: `None`")
 
 
 if __name__ == "__main__":
