@@ -80,29 +80,43 @@ def _direct_child_weight_breakdown(
 
 def _rollup_display_rows(
     rollup_rows: list[dict[str, Any]],
-    total_effective_weight: float,
-    total_maturity_weight: float,
 ) -> list[dict[str, Any]]:
-    display_rows: list[dict[str, Any]] = []
+    """Build display rows with weight_plus_maturity and pct_of_total.
+
+    pct_of_total is relative to the sum of weight_plus_maturity across ALL rows passed in,
+    so pass the full (unfiltered) rollup_rows to get correct percentages.
+    """
+    # effective_weight already equals base_weight + maturity_added_weight (maturity is baked in
+    # by the rollup service).  weight_plus_maturity is therefore just effective_weight; we
+    # derive base_weight by subtracting the maturity portion back out.
+    with_totals = []
     for row in rollup_rows:
         effective_weight = float(row["effective_weight"])
         maturity_added_weight = float(row["maturity_added_weight"])
-        qty = float(row["qty"])
-        display_rows.append(
+        with_totals.append(
             {
+                "_rel_id": row["relationship_id"],
                 "part_number": row["part_number"],
                 "name": row["name"],
-                "qty": qty,
-                "effective_weight": effective_weight,
-                "effective_weight_pct": (
-                    (effective_weight / total_effective_weight) * 100.0
-                    if total_effective_weight > 0
-                    else 0.0
-                ),
+                "base_weight": effective_weight - maturity_added_weight,
                 "maturity_added_weight": maturity_added_weight,
-                "maturity_added_pct": (
-                    (maturity_added_weight / total_maturity_weight) * 100.0
-                    if total_maturity_weight > 0
+                # weight_plus_maturity == effective_weight (not effective + maturity, which
+                # would double-count maturity).
+                "weight_plus_maturity": effective_weight,
+            }
+        )
+
+    total_w_plus_m = sum(r["weight_plus_maturity"] for r in with_totals)
+
+    # Second pass: attach pct_of_total
+    display_rows: list[dict[str, Any]] = []
+    for row in with_totals:
+        display_rows.append(
+            {
+                **row,
+                "pct_of_total": (
+                    (row["weight_plus_maturity"] / total_w_plus_m * 100.0)
+                    if total_w_plus_m > 0
                     else 0.0
                 ),
             }
@@ -151,7 +165,6 @@ def render_dashboard_tab(
 
     root_part = part_lookup.get(root_part_number, {})
     children = _child_rows(root_part_number, ctx.relationships, part_lookup)
-    total_child_qty = sum(float(child["qty"]) for child in children)
     rollup_rows: list[dict[str, Any]] = []
     unique_warnings: list[str] = []
     if children:
@@ -161,7 +174,7 @@ def render_dashboard_tab(
     hide_zero_weight = st.checkbox(
         "Hide children with zero effective weight",
         value=True,
-        help="Applies to both Direct Children and Weight Breakdown tables.",
+        help="Applies to both the Weight Breakdown table and the chart.",
         key="dashboard_hide_zero_weight",
     )
 
@@ -182,11 +195,6 @@ def render_dashboard_tab(
             if effective_weight is None or effective_weight > 0:
                 visible_children.append(child)
 
-
-
-   
-
-
     if not children:
         st.info("No direct children to analyze for this root.")
         return
@@ -197,189 +205,217 @@ def render_dashboard_tab(
 
     total_effective_weight = sum(row["effective_weight"] for row in rollup_rows)
     total_maturity_weight = sum(row["maturity_added_weight"] for row in rollup_rows)
+
     if hide_zero_weight and not visible_rollup_rows:
         st.info(
             "No non-zero child weight contributions to display. Disable the filter to view all children."
         )
         return
 
-    average_effective_weight = total_effective_weight / len(rollup_rows)
-    display_rows = _rollup_display_rows(
-        rollup_rows=visible_rollup_rows,
-        total_effective_weight=total_effective_weight,
-        total_maturity_weight=total_maturity_weight,
+    # Compute display rows from ALL rollup_rows so pct is correct even when filtered.
+    all_display_rows = _rollup_display_rows(rollup_rows)
+    visible_rel_ids = {r["relationship_id"] for r in visible_rollup_rows}
+    visible_display_rows = [r for r in all_display_rows if r["_rel_id"] in visible_rel_ids]
+
+    # ── Summary metrics ──────────────────────────────────────────────────────
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    total_base_weight = total_effective_weight - total_maturity_weight
+    metric_col1.metric("Total Weight (Base)", f"{total_base_weight:.4f}")
+    metric_col2.metric("Total Maturity Added", f"{total_maturity_weight:.4f}")
+    metric_col3.metric("Total Weight + Maturity", f"{total_effective_weight:.4f}")
+
+    # ── Stacked bar chart ─────────────────────────────────────────────────────
+    st.markdown("**Weight & Maturity by Child Part**")
+    visual_limit = st.number_input(
+        "Children shown",
+        min_value=1,
+        max_value=max(1, len(visible_display_rows)),
+        value=min(12, len(visible_display_rows)),
+        step=1,
+        key=f"dashboard_visual_limit_{root_part_number}",
     )
 
-    metric_col1, metric_col2, metric_col3 = st.columns(3)
-    metric_col1.metric("Total Effective Weight", f"{total_effective_weight:.4f}")
-    metric_col2.metric("Total Maturity Added", f"{total_maturity_weight:.4f}")
-    metric_col3.metric("Avg Child Effective Weight", f"{average_effective_weight:.4f}")
+    sorted_display = sorted(
+        visible_display_rows,
+        key=lambda row: row["weight_plus_maturity"],
+        reverse=True,
+    )
 
-    st.markdown("**Contribution Visual**")
-    visual_col1, visual_col2 = st.columns([3, 2])
-    with visual_col1:
-        visual_metric = st.radio(
-            "Visual metric",
-            options=["Effective Weight", "Maturity Added Weight"],
-            horizontal=True,
-            key=f"dashboard_visual_metric_{root_part_number}",
-        )
-    with visual_col2:
-        visual_limit = st.number_input(
-            "Children shown",
-            min_value=1,
-            max_value=len(display_rows),
-            value=min(12, len(display_rows)),
-            step=1,
-            key=f"dashboard_visual_limit_{root_part_number}",
-        )
+    # Build one row per part per segment (Weight / Maturity) for the stacked bars,
+    # plus a parallel single-row list for the pct text annotations.
+    chart_bars: list[dict[str, Any]] = []
+    chart_labels: list[dict[str, Any]] = []
+    for row in sorted_display[: int(visual_limit)]:
+        label = _chart_label(row["part_number"], row["name"])
+        pct_text = f"{row['pct_of_total']:.1f}%"
+        w_plus_m = row["weight_plus_maturity"]
 
-    if visual_metric == "Maturity Added Weight":
-        chart_field = "maturity_added_weight"
-        chart_pct_field = "maturity_added_pct"
-        chart_title = "Maturity Added Weight"
-        sorted_rows = sorted(
-            display_rows,
-            key=lambda row: float(row["maturity_added_weight"]),
-            reverse=True,
-        )
-    else:
-        chart_field = "effective_weight"
-        chart_pct_field = "effective_weight_pct"
-        chart_title = "Effective Weight"
-        sorted_rows = sorted(
-            display_rows,
-            key=lambda row: float(row["effective_weight"]),
-            reverse=True,
-        )
-
-    chart_rows = []
-    for row in sorted_rows[: int(visual_limit)]:
-        chart_rows.append(
+        chart_bars.append(
             {
+                "part_label": label,
                 "part_number": row["part_number"],
                 "name": row["name"],
-                "part_label": row["name"],
-                "effective_weight": row["effective_weight"],
-                "effective_weight_pct": row["effective_weight_pct"],
-                "maturity_added_weight": row["maturity_added_weight"],
-                "maturity_added_pct": row["maturity_added_pct"],
+                "segment": "Weight",
+                "value": row["base_weight"],
+                "weight_plus_maturity": w_plus_m,
+                "pct_label": pct_text,
+            }
+        )
+        chart_bars.append(
+            {
+                "part_label": label,
+                "part_number": row["part_number"],
+                "name": row["name"],
+                "segment": "Maturity",
+                "value": row["maturity_added_weight"],
+                "weight_plus_maturity": w_plus_m,
+                "pct_label": pct_text,
+            }
+        )
+        chart_labels.append(
+            {
+                "part_label": label,
+                "weight_plus_maturity": w_plus_m,
+                "pct_label": pct_text,
             }
         )
 
+    # Explicit domain order: largest weight_plus_maturity first → renders at the top of the
+    # y-axis.  Passing this list as `sort` in the bar layer's y-encoding is more reliable than
+    # "-x" in a layered spec where each layer has a different x field.
+    y_order = [row["part_label"] for row in chart_labels]
+
+    chart_height = min(700, max(220, 38 * len(chart_labels)))
+
     st.vega_lite_chart(
-        chart_rows,
+        chart_bars,
         {
-            "mark": {"type": "bar", "cornerRadiusEnd": 3},
-            "height": min(700, max(220, 36 * len(chart_rows))),
-            "encoding": {
-                # -----------------------------------------------------------------
-                # Y‑axis (the part label) – add an explicit axis config so the text
-                # is never clipped.
-                # -----------------------------------------------------------------
-                "y": {
-                    "field": "part_label",
-                    "type": "nominal",
-                    "sort": "-x",
-                    "title": "Child Part",
-                    "axis": {
-                        # Keep the text horizontal (change to -45/45 if you want slant)
-                        "labelAngle": 0,
-                        # Optional: give a tiny padding so the text isn’t right‑against the axis
-                        "labelPadding": 4
-                    }
+            "layer": [
+                # ── Stacked bars (Weight + Maturity) ──
+                {
+                    "mark": {"type": "bar", "cornerRadiusEnd": 3},
+                    "encoding": {
+                        "y": {
+                            "field": "part_label",
+                            "type": "nominal",
+                            "sort": y_order,
+                            "title": "Child Part",
+                            "axis": {"labelAngle": 0, "labelPadding": 4},
+                        },
+                        "x": {
+                            "field": "value",
+                            "type": "quantitative",
+                            "stack": "zero",
+                            "title": "Weight",
+                        },
+                        "color": {
+                            "field": "segment",
+                            "type": "nominal",
+                            "scale": {
+                                "domain": ["Weight", "Maturity"],
+                                "range": ["#4C78A8", "#F58518"],
+                            },
+                            "legend": {"title": "Segment"},
+                        },
+                        "tooltip": [
+                            {"field": "part_number", "type": "nominal", "title": "Part #"},
+                            {"field": "name", "type": "nominal", "title": "Name"},
+                            {"field": "segment", "type": "nominal", "title": "Segment"},
+                            {
+                                "field": "value",
+                                "type": "quantitative",
+                                "title": "Value",
+                                "format": ",.4f",
+                            },
+                            {
+                                "field": "weight_plus_maturity",
+                                "type": "quantitative",
+                                "title": "Weight + Maturity",
+                                "format": ",.4f",
+                            },
+                            {"field": "pct_label", "type": "nominal", "title": "% of Total"},
+                        ],
+                    },
                 },
-
-                # -----------------------------------------------------------------
-                # X‑axis (the metric you are plotting)
-                # -----------------------------------------------------------------
-                "x": {
-                    "field": chart_field,
-                    "type": "quantitative",
-                    "title": chart_title,
+                # ── Pct-of-total text annotation (one label per bar, at the bar end) ──
+                {
+                    "transform": [{"filter": "datum.segment === 'Weight'"}],
+                    "mark": {
+                        "type": "text",
+                        "align": "left",
+                        "dx": 5,
+                        "color": "#888888",
+                        "fontSize": 11,
+                    },
+                    "encoding": {
+                        "y": {
+                            "field": "part_label",
+                            "type": "nominal",
+                            "sort": y_order,
+                        },
+                        "x": {
+                            "field": "weight_plus_maturity",
+                            "type": "quantitative",
+                        },
+                        "text": {"field": "pct_label", "type": "nominal"},
+                    },
                 },
-
-                # -----------------------------------------------------------------
-                # Colour encoding – contribution %
-                # -----------------------------------------------------------------
-                "color": {
-                    "field": chart_pct_field,
-                    "type": "quantitative",
-                    "title": "Contribution %",
-                    "scale": {"scheme": "blues"},
-                },
-
-                # -----------------------------------------------------------------
-                # Tooltip – keep everything you already defined
-                # -----------------------------------------------------------------
-                "tooltip": [
-                    {"field": "part_number", "type": "nominal"},
-                    {"field": "name", "type": "nominal"},
-                    {"field": "effective_weight", "type": "quantitative", "format": ",.0f"},
-                    {"field": "effective_weight_pct", "type": "quantitative", "format": ".0f"},
-                    {"field": "maturity_added_weight", "type": "quantitative", "format": ",.0f"},
-                    {"field": "maturity_added_pct", "type": "quantitative", "format": ".2f"},
-                ],
-            },
-            # -----------------------------------------------------------------
-            # (Optional) Global config – you can also set a default for all axes
-            # -----------------------------------------------------------------
+            ],
+            "height": chart_height,
             "config": {
-                "axisY": {"minExtent": 300},
-                "axis": {
-                    # This is a safety‑net; the explicit axis config above will
-                    # override it for the y‑axis, but it prevents other axes
-                    # elsewhere in the spec from being truncated.
-                    "labelLimit": None,
-                }
-            }
+                "axisY": {"minExtent": 180},
+                "axis": {"labelLimit": 0},
+            },
         },
         width="stretch",
     )
 
-
+    # ── Weight Breakdown table ────────────────────────────────────────────────
     st.markdown(f"**Weight Breakdown for Children of `{root_part_number}`**")
+    table_rows = [
+        {
+            "part_number": row["part_number"],
+            "name": row["name"],
+            "base_weight": row["base_weight"],
+            "maturity_added_weight": row["maturity_added_weight"],
+            "weight_plus_maturity": row["weight_plus_maturity"],
+            "pct_of_total": row["pct_of_total"],
+        }
+        for row in visible_display_rows
+    ]
     st.dataframe(
-        display_rows,
+        table_rows,
         width="stretch",
         hide_index=True,
         column_order=[
             "part_number",
             "name",
-            "qty",
-            "effective_weight",
-            "effective_weight_pct",
+            "base_weight",
             "maturity_added_weight",
-            "maturity_added_pct",
+            "weight_plus_maturity",
+            "pct_of_total",
         ],
         column_config={
-            "qty": st.column_config.NumberColumn("qty", format="%.3f"),
-            "effective_weight": st.column_config.NumberColumn(
-                "effective_weight",
-                format="%.4f",
+            "part_number": st.column_config.TextColumn("Part Number"),
+            "name": st.column_config.TextColumn("Name"),
+            "base_weight": st.column_config.NumberColumn("Weight", format="%.4f"),
+            "maturity_added_weight": st.column_config.NumberColumn("Maturity", format="%.4f"),
+            "weight_plus_maturity": st.column_config.NumberColumn(
+                "Weight + Maturity", format="%.4f"
             ),
-            "effective_weight_pct": st.column_config.NumberColumn(
-                "effective_weight_pct",
-                format="%.2f%%",
-            ),
-            "maturity_added_weight": st.column_config.NumberColumn(
-                "maturity_added_weight",
-                format="%.4f",
-            ),
-            "maturity_added_pct": st.column_config.NumberColumn(
-                "maturity_added_pct",
-                format="%.2f%%",
-            ),
+            "pct_of_total": st.column_config.NumberColumn("Pct of Total", format="%.2f%%"),
         },
     )
 
-        
+    # ── Debug footer ──────────────────────────────────────────────────────────
     st.divider()
     st.subheader("Root Context Debug")
     st.markdown(f"**Root Context:** `{root_part_number}` | {root_part.get('name', '(missing)')}")
     summary_col1, summary_col2, summary_col3 = st.columns(3)
     summary_col1.metric("Direct Children", f"{len(visible_children)}/{len(children)}")
-    summary_col2.metric("Analyzed Children", f"{len(visible_rollup_rows)}/{len(rollup_rows)}")
+    summary_col2.metric(
+        "Analyzed Children", f"{len(visible_display_rows)}/{len(all_display_rows)}"
+    )
     summary_col3.metric("Warnings", len(unique_warnings))
     if unique_warnings:
         st.caption(f"{len(unique_warnings)} warning(s) while computing child rollups.")
