@@ -8,7 +8,7 @@ from typing import Any
 import streamlit as st
 
 from streamlit_ui.context import AppContext, build_app_context
-from streamlit_ui.helpers import resolve_data_dir
+from streamlit_ui.helpers import resolve_data_dir, show_service_result
 from streamlit_ui.tabs import (
     render_analysis_tab,
     render_csv_tab,
@@ -356,6 +356,25 @@ def render_data_snapshot_tab(ctx: AppContext) -> None:
     st.divider()
     render_snapshot_selector(ctx)
 
+    st.divider()
+    st.subheader("Create Snapshot")
+
+    universal_root = st.session_state.get(UNIVERSAL_ROOT_PART_KEY, "").strip()
+    st.caption(f"Root from sidebar: `{universal_root or '(none selected)'}`")
+
+    with st.form("snapshot_create_form"):
+        snapshot_label = st.text_input("Snapshot label", placeholder="baseline")
+        deduplicate = st.checkbox("Deduplicate if identical", value=True)
+        submit_snapshot = st.form_submit_button("Create Snapshot", disabled=not universal_root)
+
+    if submit_snapshot:
+        create_result = ctx.live_backend.snapshots.create_snapshot(
+            root_part_number=universal_root,
+            label=snapshot_label or None,
+            deduplicate_if_identical=deduplicate,
+        )
+        show_service_result("Create snapshot", create_result, show_data=True)
+
 
 def render_metrics(parts_count: int, relationships_count: int, snapshots_count: int) -> None:
     metric_col1, metric_col2, metric_col3 = st.columns(3)
@@ -436,10 +455,10 @@ def main() -> None:
         render_data_snapshot_tab(ctx)
 
     with tab_parts:
-        render_parts_tab(ctx)
+        render_parts_tab(ctx, root_part_number=universal_root)
 
     with tab_relationships:
-        render_relationships_tab(ctx)
+        render_relationships_tab(ctx, root_part_number=universal_root)
 
     with tab_analysis:
         render_analysis_tab(ctx, root_part_number=universal_root)

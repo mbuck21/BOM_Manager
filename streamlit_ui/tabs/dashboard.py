@@ -287,7 +287,7 @@ def render_dashboard_tab(
     # "-x" in a layered spec where each layer has a different x field.
     y_order = [row["part_label"] for row in chart_labels]
 
-    chart_height = min(700, max(220, 38 * len(chart_labels)))
+    chart_height = min(900, max(300, 50 * len(chart_labels)))
 
     st.vega_lite_chart(
         chart_bars,
@@ -366,7 +366,7 @@ def render_dashboard_tab(
             ],
             "height": chart_height,
             "config": {
-                "axisY": {"minExtent": 180},
+                "axisY": {"minExtent": 260},
                 "axis": {"labelLimit": 0},
             },
         },

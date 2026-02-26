@@ -2,19 +2,21 @@
   "parts": [
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 32.9
       },
-      "last_updated": "2026-02-12T00:39:10Z",
+      "last_updated": "2026-02-26T13:33:50Z",
       "name": "SUBARRAY SUITE ASSEMBLY",
       "part_number": "20541500-508"
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 10.5
       },
-      "last_updated": "2026-02-12T00:39:10Z",
+      "last_updated": "2026-02-26T13:34:29Z",
       "name": "COLUMN PROCESSOR LRU ASSEMBLY",
       "part_number": "20541635-505"
     },
@@ -92,10 +94,11 @@
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 8
       },
-      "last_updated": "2026-02-12T00:39:10Z",
+      "last_updated": "2026-02-26T13:33:59Z",
       "name": "DIGITAL DISTRIBUTION ASSEMBLY",
       "part_number": "20543782-502"
     },
@@ -209,10 +212,11 @@
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 4.58
       },
-      "last_updated": "2026-02-12T00:39:09Z",
+      "last_updated": "2026-02-26T13:35:15Z",
       "name": "BEAMFORMER ASSEMBLY",
       "part_number": "20546382-1"
     },
@@ -428,19 +432,21 @@
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 2.26
       },
-      "last_updated": "2026-02-12T00:39:09Z",
+      "last_updated": "2026-02-26T13:35:38Z",
       "name": "CCA - FILTER CIRCULATOR, ODD",
       "part_number": "20547110-1"
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 2.26
       },
-      "last_updated": "2026-02-12T00:39:09Z",
+      "last_updated": "2026-02-26T13:35:47Z",
       "name": "CCA - FILTER CIRCULATOR, EVEN",
       "part_number": "20547110-2"
     },
@@ -575,19 +581,21 @@
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 0.8
       },
-      "last_updated": "2026-02-12T00:39:10Z",
+      "last_updated": "2026-02-26T13:35:00Z",
       "name": "TILE ASSEMBLY, THINNED",
       "part_number": "20547270-501"
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 3
       },
-      "last_updated": "2026-02-12T00:39:10Z",
+      "last_updated": "2026-02-26T13:34:49Z",
       "name": "TILE ASSEMBLY, LOWER A",
       "part_number": "20547276-501"
     },
@@ -835,8 +843,10 @@
       "part_number": "20553744-501"
     },
     {
-      "attributes": {},
-      "last_updated": "2026-02-12T00:39:11Z",
+      "attributes": {
+        "test": "test works"
+      },
+      "last_updated": "2026-02-26T13:27:43Z",
       "name": "REAR COLUMN GROUP",
       "part_number": "20553750"
     },
@@ -1255,8 +1265,10 @@
       "part_number": "20553839-1"
     },
     {
-      "attributes": {},
-      "last_updated": "2026-02-12T00:39:11Z",
+      "attributes": {
+        "test": "Test Works"
+      },
+      "last_updated": "2026-02-26T13:10:16Z",
       "name": "FORWARD COLUMN GROUP",
       "part_number": "20553840"
     },

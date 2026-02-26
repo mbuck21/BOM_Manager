@@ -3,7 +3,11 @@
     "allow": [
       "Bash(.venv/Scripts/pip.exe install pytest -q)",
       "Bash(.venv/Scripts/python.exe -m pytest tests/ -v)",
-      "Bash(python -c \":*)"
+      "Bash(python -c \":*)",
+      "Bash(.venv/Scripts/python.exe -c \"from streamlit_ui.tabs.parts import render_parts_tab; from streamlit_ui.tabs.relationships import render_relationships_tab; print\\(''OK''\\)\")",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ -q)",
+      "Bash(.venv/Scripts/python.exe -c \"import streamlit_ui.tabs.weight_analysis; print\\(''OK''\\)\")",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/ -v --tb=short)"
     ]
   }
 }

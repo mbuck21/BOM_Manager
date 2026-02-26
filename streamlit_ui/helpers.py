@@ -1,10 +1,26 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
+
+
+def format_timestamp(iso_str: str) -> str:
+    """Convert an ISO-8601 timestamp like '2026-02-26T14:30:00Z' to 'Feb 26, 2026  2:30 PM'."""
+    if not iso_str or iso_str == "—":
+        return "—"
+    try:
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        # %#I on Windows, %-I on Unix — fall back gracefully
+        try:
+            return dt.strftime("%b %d, %Y  %#I:%M %p")
+        except ValueError:
+            return dt.strftime("%b %d, %Y  %-I:%M %p")
+    except (ValueError, TypeError):
+        return iso_str
 
 
 def resolve_data_dir(raw_value: str) -> Path:
