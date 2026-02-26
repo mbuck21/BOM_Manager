@@ -35,8 +35,63 @@ def _safe_widget_key(value: str) -> str:
 def _part_label(part_number: str, part_lookup: dict[str, dict[str, Any]]) -> str:
     part_name = str(part_lookup.get(part_number, {}).get("name", "")).strip()
     if part_name:
-        return f"{part_number} | {part_name}"
+        return f"{part_number}  |  {part_name}"
     return part_number
+
+
+def _compute_subtree_weights(
+    part_numbers: list[str],
+    part_lookup: dict[str, dict[str, Any]],
+    relationships: list[dict[str, Any]],
+) -> dict[str, float]:
+    """Compute effective subtree weight for each part, matching rollup_weight_with_maturity logic."""
+    children_qty: dict[str, list[tuple[str, float]]] = defaultdict(list)
+    for rel in relationships:
+        parent = str(rel.get("parent_part_number", "")).strip()
+        child = str(rel.get("child_part_number", "")).strip()
+        if not parent or not child:
+            continue
+        try:
+            qty = float(rel.get("qty", 1) or 1)
+        except (TypeError, ValueError):
+            qty = 1.0
+        children_qty[parent].append((child, qty))
+
+    def get_unit_weight(pn: str) -> float | None:
+        attrs = part_lookup.get(pn, {}).get("attributes") or {}
+        raw_uw = attrs.get("unit_weight")
+        if raw_uw is None:
+            return None
+        try:
+            uw = float(raw_uw)
+        except (TypeError, ValueError):
+            return None
+        try:
+            mf = float(attrs.get("maturity_factor") or 1.0)
+        except (TypeError, ValueError):
+            mf = 1.0
+        return uw * (mf if mf > 0 else 1.0)
+
+    memo: dict[str, float] = {}
+
+    def dfs(pn: str, visiting: set[str]) -> float:
+        if pn in memo:
+            return memo[pn]
+        if pn in visiting:
+            return 0.0
+        visiting.add(pn)
+        uw = get_unit_weight(pn)
+        if uw is not None:
+            result = uw
+        else:
+            result = sum(qty * dfs(child, visiting) for child, qty in children_qty.get(pn, []))
+        visiting.discard(pn)
+        memo[pn] = result
+        return result
+
+    for pn in part_numbers:
+        dfs(pn, set())
+    return memo
 
 
 def _root_candidates(
@@ -91,17 +146,26 @@ def _render_directory_node(
     part_lookup: dict[str, dict[str, Any]],
     children_map: dict[str, list[str]],
     path: tuple[str, ...],
+    active_root: str = "",
+    weight_map: dict[str, float] | None = None,
     depth: int = 0,
     max_depth: int = 12,
 ) -> None:
     label = _part_label(part_number, part_lookup)
+    is_active = part_number == active_root
+    display_label = f"★ {label}" if is_active else label
     node_key = "__".join(_safe_widget_key(item) for item in path)
     children = children_map.get(part_number, [])
     visible_children = [child for child in children if child in part_lookup and child not in path]
+    if weight_map:
+        visible_children = sorted(visible_children, key=lambda c: (-weight_map.get(c, 0), c))
 
     if visible_children and depth < max_depth:
-        expander = container.expander(label, expanded=depth == 0)
-        if expander.button("Set this as root", key=f"root_pick_{node_key}"):
+        should_expand = depth == 0 or is_active
+        expander = container.expander(display_label, expanded=should_expand)
+        if is_active:
+            expander.caption("Current root")
+        elif expander.button("Use as root", key=f"root_pick_{node_key}"):
             _set_universal_root(part_number)
         for child in visible_children:
             _render_directory_node(
@@ -110,6 +174,8 @@ def _render_directory_node(
                 part_lookup,
                 children_map,
                 (*path, child),
+                active_root=active_root,
+                weight_map=weight_map,
                 depth=depth + 1,
                 max_depth=max_depth,
             )
@@ -119,7 +185,10 @@ def _render_directory_node(
             expander.caption("Cycle detected: " + ", ".join(cycle_nodes))
         return
 
-    if container.button(label, key=f"root_leaf_pick_{node_key}"):
+    if is_active:
+        container.markdown(f"**★ {label}**")
+        container.caption("Current root")
+    elif container.button(display_label, key=f"root_leaf_pick_{node_key}"):
         _set_universal_root(part_number)
     if depth >= max_depth and children:
         container.caption("Depth limit reached for this branch.")
@@ -145,12 +214,16 @@ def render_root_sidebar(ctx: AppContext) -> str:
         active_root = available_roots[0]
         st.session_state[UNIVERSAL_ROOT_PART_KEY] = active_root
 
-    st.sidebar.caption(f"Selected root: `{active_root}`")
+    weight_map = _compute_subtree_weights(part_numbers, part_lookup, ctx.relationships)
+    available_roots = sorted(available_roots, key=lambda pn: (-weight_map.get(pn, 0), pn))
+
+    active_label = _part_label(active_root, part_lookup)
+    st.sidebar.info(f"**Active root:**\n\n{active_label}", icon="📍")
 
     query = st.sidebar.text_input(
         "Find part",
         key=ROOT_DIRECTORY_FILTER_KEY,
-        placeholder="Part number or name",
+        placeholder="Type to filter by number or name…",
     ).strip()
     if query:
         query_lower = query.lower()
@@ -161,19 +234,24 @@ def render_root_sidebar(ctx: AppContext) -> str:
             or query_lower in str(part_lookup.get(part_number, {}).get("name", "")).lower()
         ]
         if matches:
-            selected_match = st.sidebar.selectbox(
-                "Matches",
-                options=matches,
-                format_func=lambda part_number: _part_label(part_number, part_lookup),
-                key="root_directory_match_selector",
-            )
-            if st.sidebar.button("Use selected match as root", key="apply_root_match_selector"):
-                _set_universal_root(selected_match)
+            n = len(matches)
+            st.sidebar.caption(f"{n} match{'es' if n != 1 else ''} found")
+            if n == 1:
+                _set_universal_root(matches[0])
+            else:
+                selected_match = st.sidebar.selectbox(
+                    "Matches",
+                    options=matches,
+                    format_func=lambda part_number: _part_label(part_number, part_lookup),
+                    key="root_directory_match_selector",
+                )
+                if st.sidebar.button("Use as root", key="apply_root_match_selector"):
+                    _set_universal_root(selected_match)
         else:
             st.sidebar.caption("No matches.")
         st.sidebar.divider()
 
-    st.sidebar.caption("Expand a branch and choose a part to use as the shared root.")
+    st.sidebar.caption("Browse the tree below. Click a part to set it as root.")
     children_map = _children_by_parent(ctx.relationships)
     for root_part_number in available_roots:
         _render_directory_node(
@@ -182,6 +260,8 @@ def render_root_sidebar(ctx: AppContext) -> str:
             part_lookup,
             children_map,
             (root_part_number,),
+            active_root=active_root,
+            weight_map=weight_map,
         )
 
     return st.session_state.get(UNIVERSAL_ROOT_PART_KEY, "")
@@ -293,6 +373,10 @@ def main() -> None:
             max-width: 1600px;
             padding-left: 2rem;
             padding-right: 2rem;
+        }
+        [data-testid="stSidebar"] {
+            min-width: 380px;
+            max-width: 380px;
         }
         </style>
         """,
