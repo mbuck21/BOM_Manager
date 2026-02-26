@@ -375,8 +375,7 @@ def main() -> None:
             padding-right: 2rem;
         }
         [data-testid="stSidebar"] {
-            min-width: 380px;
-            max-width: 380px;
+            min-width: 550px;
         }
         </style>
         """,

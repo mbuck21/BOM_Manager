@@ -136,13 +136,6 @@ def render_dashboard_tab(
     root_part_number: str,
     root_state_key: str = "universal_root_part_number",
 ) -> None:
-    if ctx.snapshot_mode:
-        st.caption("Snapshot mode active: analysis uses loaded snapshot data.")
-    st.subheader("Interactive Root Breakdown")
-    st.caption(
-        "Engineer workflow: choose a root, review direct children, and prioritize high-weight branches."
-    )
-
     if not ctx.parts_result.get("ok"):
         show_service_result("List parts", ctx.parts_result)
         return
@@ -164,6 +157,12 @@ def render_dashboard_tab(
             st.rerun()
 
     root_part = part_lookup.get(root_part_number, {})
+    root_name = root_part.get("name", "")
+    if root_name:
+        st.subheader(f"Weight Breakdown for {root_part_number} \u2014 {root_name}")
+    else:
+        st.subheader(f"Weight Breakdown for {root_part_number}")
+
     children = _child_rows(root_part_number, ctx.relationships, part_lookup)
     rollup_rows: list[dict[str, Any]] = []
     unique_warnings: list[str] = []
@@ -171,12 +170,8 @@ def render_dashboard_tab(
         rollup_rows, rollup_warnings = _direct_child_weight_breakdown(ctx, root_part_number, children)
         unique_warnings = list(dict.fromkeys(rollup_warnings))
 
-    hide_zero_weight = st.checkbox(
-        "Hide children with zero effective weight",
-        value=True,
-        help="Applies to both the Weight Breakdown table and the chart.",
-        key="dashboard_hide_zero_weight",
-    )
+    # Read filter state early (the actual checkbox widget renders later in Chart Settings).
+    hide_zero_weight = st.session_state.get("dashboard_hide_zero_weight", True)
 
     effective_weight_by_child_key = {
         (row["relationship_id"], row["part_number"]): float(row["effective_weight"])
@@ -220,20 +215,27 @@ def render_dashboard_tab(
     # ── Summary metrics ──────────────────────────────────────────────────────
     metric_col1, metric_col2, metric_col3 = st.columns(3)
     total_base_weight = total_effective_weight - total_maturity_weight
-    metric_col1.metric("Total Weight (Base)", f"{total_base_weight:.4f}")
-    metric_col2.metric("Total Maturity Added", f"{total_maturity_weight:.4f}")
-    metric_col3.metric("Total Weight + Maturity", f"{total_effective_weight:.4f}")
+    metric_col1.metric("Total Weight (Base)", f"{total_base_weight:,.0f} lbs")
+    metric_col2.metric("Total Maturity Added", f"{total_maturity_weight:,.0f} lbs")
+    metric_col3.metric("Total Weight + Maturity", f"{total_effective_weight:,.0f} lbs")
 
     # ── Stacked bar chart ─────────────────────────────────────────────────────
     st.markdown("**Weight & Maturity by Child Part**")
-    visual_limit = st.number_input(
-        "Children shown",
-        min_value=1,
-        max_value=max(1, len(visible_display_rows)),
-        value=min(12, len(visible_display_rows)),
-        step=1,
-        key=f"dashboard_visual_limit_{root_part_number}",
-    )
+    with st.expander("Chart Settings", expanded=False):
+        hide_zero_weight = st.checkbox(
+            "Hide children with zero effective weight",
+            value=True,
+            help="Applies to both the Weight Breakdown table and the chart.",
+            key="dashboard_hide_zero_weight",
+        )
+        visual_limit = st.number_input(
+            "Children shown",
+            min_value=1,
+            max_value=max(1, len(visible_display_rows)),
+            value=min(12, len(visible_display_rows)),
+            step=1,
+            key=f"dashboard_visual_limit_{root_part_number}",
+        )
 
     sorted_display = sorted(
         visible_display_rows,
@@ -306,7 +308,8 @@ def render_dashboard_tab(
                             "field": "value",
                             "type": "quantitative",
                             "stack": "zero",
-                            "title": "Weight",
+                            "title": "Weight (lbs)",
+                            "axis": {"format": ",.0f"},
                         },
                         "color": {
                             "field": "segment",
@@ -324,14 +327,14 @@ def render_dashboard_tab(
                             {
                                 "field": "value",
                                 "type": "quantitative",
-                                "title": "Value",
-                                "format": ",.4f",
+                                "title": "Value (lbs)",
+                                "format": ",.0f",
                             },
                             {
                                 "field": "weight_plus_maturity",
                                 "type": "quantitative",
-                                "title": "Weight + Maturity",
-                                "format": ",.4f",
+                                "title": "Weight + Maturity (lbs)",
+                                "format": ",.0f",
                             },
                             {"field": "pct_label", "type": "nominal", "title": "% of Total"},
                         ],
@@ -371,14 +374,13 @@ def render_dashboard_tab(
     )
 
     # ── Weight Breakdown table ────────────────────────────────────────────────
-    st.markdown(f"**Weight Breakdown for Children of `{root_part_number}`**")
     table_rows = [
         {
             "part_number": row["part_number"],
             "name": row["name"],
-            "base_weight": row["base_weight"],
-            "maturity_added_weight": row["maturity_added_weight"],
-            "weight_plus_maturity": row["weight_plus_maturity"],
+            "base_weight": f"{row['base_weight']:,.0f}",
+            "maturity_added_weight": f"{row['maturity_added_weight']:,.0f}",
+            "weight_plus_maturity": f"{row['weight_plus_maturity']:,.0f}",
             "pct_of_total": row["pct_of_total"],
         }
         for row in visible_display_rows
@@ -398,12 +400,10 @@ def render_dashboard_tab(
         column_config={
             "part_number": st.column_config.TextColumn("Part Number"),
             "name": st.column_config.TextColumn("Name"),
-            "base_weight": st.column_config.NumberColumn("Weight", format="%.4f"),
-            "maturity_added_weight": st.column_config.NumberColumn("Maturity", format="%.4f"),
-            "weight_plus_maturity": st.column_config.NumberColumn(
-                "Weight + Maturity", format="%.4f"
-            ),
-            "pct_of_total": st.column_config.NumberColumn("Pct of Total", format="%.2f%%"),
+            "base_weight": st.column_config.TextColumn("Weight (lbs)"),
+            "maturity_added_weight": st.column_config.TextColumn("Maturity (lbs)"),
+            "weight_plus_maturity": st.column_config.TextColumn("Weight + Maturity (lbs)"),
+            "pct_of_total": st.column_config.NumberColumn("% of Total", format="%.1f%%"),
         },
     )
 
