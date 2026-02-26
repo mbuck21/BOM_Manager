@@ -4,6 +4,7 @@ from typing import Any
 
 import streamlit as st
 
+from bom_backend.constants import MATURITY_FACTOR_KEY, UNIT_WEIGHT_KEY
 from streamlit_ui.context import AppContext
 from streamlit_ui.helpers import show_service_result
 
@@ -54,8 +55,8 @@ def render_weight_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
 
     with st.form("weight_analysis_form"):
         st.caption(f"Root from sidebar: `{selected_root or '(none selected)'}`")
-        unit_weight_key = st.text_input("Unit weight attribute key", value="unit_weight")
-        maturity_factor_key = st.text_input("Maturity factor attribute key", value="maturity_factor")
+        unit_weight_key = st.text_input("Unit weight attribute key", value=UNIT_WEIGHT_KEY)
+        maturity_factor_key = st.text_input("Maturity factor attribute key", value=MATURITY_FACTOR_KEY)
         default_maturity_factor = st.number_input(
             "Default maturity factor",
             min_value=0.01,

@@ -13,7 +13,7 @@ from bom_backend.serialization import (
     snapshot_from_record,
     snapshot_to_record,
 )
-from bom_backend.utils.parsing import canonical_number
+from bom_backend.utils.sorting import relationship_sort_key
 
 
 class JSONFileCollection:
@@ -45,9 +45,11 @@ class JSONFileCollection:
 
     def _write_records(self, records: list[dict[str, Any]]) -> None:
         payload = {self.root_key: records}
-        with self.path.open("w", encoding="utf-8") as handle:
+        tmp = self.path.with_suffix(".tmp")
+        with tmp.open("w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2, sort_keys=True, ensure_ascii=True)
             handle.write("\n")
+        tmp.replace(self.path)
 
 
 class PartRepository:
@@ -62,10 +64,7 @@ class PartRepository:
         return parts
 
     def get(self, part_number: str) -> Part | None:
-        for part in self.list_parts():
-            if part.part_number == part_number:
-                return part
-        return None
+        return {p.part_number: p for p in self.list_parts()}.get(part_number)
 
     def exists(self, part_number: str) -> bool:
         return self.get(part_number) is not None
@@ -99,10 +98,10 @@ class RelationshipRepository:
     def _sort_records(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return sorted(
             records,
-            key=lambda item: (
+            key=lambda item: relationship_sort_key(
                 item["parent_part_number"],
                 item["child_part_number"],
-                canonical_number(item["qty"]),
+                item["qty"],
                 item.get("rel_id", ""),
             ),
         )
@@ -113,10 +112,7 @@ class RelationshipRepository:
         return [relationship_from_record(record) for record in records]
 
     def get(self, rel_id: str) -> Relationship | None:
-        for relationship in self.list_relationships():
-            if relationship.rel_id == rel_id:
-                return relationship
-        return None
+        return {r.rel_id: r for r in self.list_relationships()}.get(rel_id)
 
     def upsert(self, relationship: Relationship) -> Relationship:
         relationships = {item.rel_id: item for item in self.list_relationships()}
@@ -176,9 +172,11 @@ class SnapshotRepository:
             raise ValueError(f"Snapshot '{snapshot.snapshot_id}' already exists")
 
         payload = snapshot_to_record(snapshot)
-        with path.open("w", encoding="utf-8") as handle:
+        tmp = path.with_suffix(".tmp")
+        with tmp.open("w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2, sort_keys=True, ensure_ascii=True)
             handle.write("\n")
+        tmp.replace(path)
 
         return snapshot
 

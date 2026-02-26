@@ -4,12 +4,13 @@ from collections import defaultdict, deque
 from typing import Any
 from uuid import uuid4
 
+from bom_backend.constants import QTY_MAX
 from bom_backend.models import Relationship
 from bom_backend.repositories import PartRepository, RelationshipRepository
 from bom_backend.result import ServiceResult, err_result, ok_result, service_guard
 from bom_backend.serialization import part_to_record, relationship_to_record
 from bom_backend.utils.clock import now_iso_utc
-from bom_backend.utils.parsing import canonical_number
+from bom_backend.utils.sorting import relationship_sort_key
 
 
 class BOMStructureService:
@@ -20,10 +21,10 @@ class BOMStructureService:
     def _sort_relationships(self, relationships: list[Relationship]) -> list[Relationship]:
         return sorted(
             relationships,
-            key=lambda rel: (
+            key=lambda rel: relationship_sort_key(
                 rel.parent_part_number,
                 rel.child_part_number,
-                canonical_number(rel.qty),
+                rel.qty,
                 rel.rel_id,
             ),
         )
@@ -104,6 +105,8 @@ class BOMStructureService:
 
         if qty_value <= 0:
             return err_result("qty must be > 0")
+        if qty_value > QTY_MAX:
+            return err_result(f"qty must be <= {QTY_MAX:,.0f}")
 
         normalized_rel_id = (rel_id or "").strip() or f"rel_{uuid4().hex[:12]}"
         existing = self.relationship_repo.get(normalized_rel_id)

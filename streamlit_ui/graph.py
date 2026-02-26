@@ -4,7 +4,13 @@ from typing import Any
 
 
 def _escape_dot_label(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\t", "\\t")
+        .replace("\r", "\\r")
+    )
 
 
 def build_bom_graph_dot(

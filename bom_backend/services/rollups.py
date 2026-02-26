@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import deque
 from typing import Any
 
+from bom_backend.constants import MATURITY_FACTOR_KEY, UNIT_WEIGHT_KEY
 from bom_backend.repositories import PartRepository, RelationshipRepository
 from bom_backend.result import ServiceResult, err_result, ok_result, service_guard
 
@@ -35,6 +36,11 @@ class RollupService:
         warnings: list[str] = []
         warning_set: set[str] = set()
 
+        def add_warning(message: str) -> None:
+            if message not in warning_set:
+                warning_set.add(message)
+                warnings.append(message)
+
         while queue:
             part_number, quantity_multiplier, path = queue.popleft()
             is_root = len(path) == 1
@@ -42,29 +48,18 @@ class RollupService:
             if include_root or not is_root:
                 part = self.part_repo.get(part_number)
                 if part is None:
-                    warning = f"Part '{part_number}' is missing from catalog"
-                    if warning not in warning_set:
-                        warnings.append(warning)
-                        warning_set.add(warning)
+                    add_warning(f"Part '{part_number}' is missing from catalog")
                 else:
                     raw_value = part.attributes.get(attribute_key)
                     if raw_value is None:
-                        warning = (
-                            f"Part '{part_number}' is missing attribute '{attribute_key}'"
-                        )
-                        if warning not in warning_set:
-                            warnings.append(warning)
-                            warning_set.add(warning)
+                        add_warning(f"Part '{part_number}' is missing attribute '{attribute_key}'")
                     else:
                         try:
                             numeric_value = float(raw_value)
                         except (TypeError, ValueError):
-                            warning = (
+                            add_warning(
                                 f"Part '{part_number}' has non-numeric '{attribute_key}': {raw_value}"
                             )
-                            if warning not in warning_set:
-                                warnings.append(warning)
-                                warning_set.add(warning)
                         else:
                             contribution = numeric_value * quantity_multiplier
                             total += contribution
@@ -103,8 +98,8 @@ class RollupService:
     def rollup_weight_with_maturity(
         self,
         root_part_number: str,
-        unit_weight_key: str = "unit_weight",
-        maturity_factor_key: str = "maturity_factor",
+        unit_weight_key: str = UNIT_WEIGHT_KEY,
+        maturity_factor_key: str = MATURITY_FACTOR_KEY,
         default_maturity_factor: float = 1.0,
         include_root: bool = True,
         top_n: int = 10,

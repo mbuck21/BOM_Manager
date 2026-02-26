@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from bom_backend.constants import CSV_IMPORT_ROW_WARN_THRESHOLD
 from bom_backend.repositories import PartRepository, RelationshipRepository
 from bom_backend.result import ServiceResult, err_result, ok_result, service_guard
 from bom_backend.services.bom_structure import BOMStructureService
@@ -91,7 +92,14 @@ class CSVInterchangeService:
                     f"Missing required columns for parts import: {', '.join(sorted(missing))}"
                 )
 
+            warned_large = False
             for idx, row in enumerate(reader, start=2):
+                if not warned_large and (idx - 1) > CSV_IMPORT_ROW_WARN_THRESHOLD:
+                    warnings.append(
+                        f"Large import: over {CSV_IMPORT_ROW_WARN_THRESHOLD:,} rows — this may be slow"
+                    )
+                    warned_large = True
+
                 part_number = str(row.get("part_number", "")).strip()
                 name = str(row.get("name", "")).strip()
                 last_updated = str(row.get("last_updated", "")).strip() or None
@@ -163,7 +171,14 @@ class CSVInterchangeService:
                     + ", ".join(sorted(missing))
                 )
 
+            warned_large = False
             for idx, row in enumerate(reader, start=2):
+                if not warned_large and (idx - 1) > CSV_IMPORT_ROW_WARN_THRESHOLD:
+                    warnings.append(
+                        f"Large import: over {CSV_IMPORT_ROW_WARN_THRESHOLD:,} rows — this may be slow"
+                    )
+                    warned_large = True
+
                 parent = str(row.get("parent_part_number", "")).strip()
                 child = str(row.get("child_part_number", "")).strip()
                 rel_id = str(row.get("rel_id", "")).strip() or None
