@@ -124,6 +124,43 @@ def _rollup_display_rows(
     return display_rows
 
 
+def _weight_optimization_breakdown(
+    ctx: AppContext,
+    root_part_number: str,
+    part_lookup: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Roll up weight from root and classify each contribution by can_weight_optimized."""
+    result = ctx.backend.rollups.rollup_weight_with_maturity(
+        root_part_number=root_part_number,
+        include_root=True,
+    )
+    if not result.get("ok"):
+        return None
+
+    breakdown = result["data"].get("breakdown", [])
+    optimizable = 0.0
+    not_optimizable = 0.0
+
+    for item in breakdown:
+        contribution = float(item["contribution"])
+        pn = item["part_number"]
+        part = part_lookup.get(pn, {})
+        flag = part.get("attributes", {}).get("can_weight_optimized")
+
+        if flag is False:
+            not_optimizable += contribution
+        else:
+            # True or not set — assume optimizable
+            optimizable += contribution
+
+    total = optimizable + not_optimizable
+    return {
+        "optimizable": optimizable,
+        "not_optimizable": not_optimizable,
+        "total": total,
+    }
+
+
 def _chart_label(part_number: str, name: str) -> str:
     clean_name = str(name).strip() or "(missing)"
     if len(clean_name) > 32:
@@ -372,6 +409,68 @@ def render_dashboard_tab(
         },
         width="stretch",
     )
+
+    # ── Weight Optimization Potential (donut chart) ─────────────────────────
+    opt_data = _weight_optimization_breakdown(ctx, root_part_number, part_lookup)
+    if opt_data and opt_data["total"] > 0:
+        st.markdown("**Weight Optimization Potential**")
+
+        opt_total = opt_data["total"]
+        pct_optimizable = opt_data["optimizable"] / opt_total * 100.0
+        pct_not_optimizable = opt_data["not_optimizable"] / opt_total * 100.0
+
+        opt_col1, opt_col2 = st.columns(2)
+        opt_col1.metric("Optimizable", f"{pct_optimizable:.1f}%", f"{opt_data['optimizable']:,.0f} lbs")
+        opt_col2.metric("Not Optimizable", f"{pct_not_optimizable:.1f}%", f"{opt_data['not_optimizable']:,.0f} lbs")
+
+        donut_data: list[dict[str, Any]] = []
+        for label, value, color in [
+            ("Optimizable", opt_data["optimizable"], "#2CA02C"),
+            ("Not Optimizable", opt_data["not_optimizable"], "#D62728"),
+        ]:
+            if value > 0:
+                donut_data.append({
+                    "category": label,
+                    "weight": value,
+                    "pct": f"{value / opt_total * 100:.1f}%",
+                    "color": color,
+                })
+
+        st.vega_lite_chart(
+            donut_data,
+            {
+                "mark": {"type": "arc", "innerRadius": 60, "outerRadius": 130},
+                "encoding": {
+                    "theta": {
+                        "field": "weight",
+                        "type": "quantitative",
+                        "stack": True,
+                    },
+                    "color": {
+                        "field": "category",
+                        "type": "nominal",
+                        "scale": {
+                            "domain": [d["category"] for d in donut_data],
+                            "range": [d["color"] for d in donut_data],
+                        },
+                        "legend": {"title": "Optimization Status"},
+                    },
+                    "tooltip": [
+                        {"field": "category", "type": "nominal", "title": "Status"},
+                        {
+                            "field": "weight",
+                            "type": "quantitative",
+                            "title": "Weight (lbs)",
+                            "format": ",.0f",
+                        },
+                        {"field": "pct", "type": "nominal", "title": "% of Total"},
+                    ],
+                },
+                "height": 300,
+                "width": 300,
+                "view": {"stroke": None},
+            },
+        )
 
     # ── Weight Breakdown table ────────────────────────────────────────────────
     table_rows = [

@@ -452,10 +452,11 @@
     },
     {
       "attributes": {
+        "can_weight_optimized": false,
         "maturity_factor": 1,
         "unit_weight": 2.26
       },
-      "last_updated": "2026-02-12T00:39:09Z",
+      "last_updated": "2026-02-26T13:56:15Z",
       "name": "CCA - FILTER CIRCULATOR, EVEN CAL",
       "part_number": "20547110-4"
     },

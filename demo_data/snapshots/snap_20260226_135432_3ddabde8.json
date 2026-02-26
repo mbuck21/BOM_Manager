@@ -1,0 +1,20 @@
+{
+  "created_at": "2026-02-26T13:54:32Z",
+  "label": "Added Optimization",
+  "parts": [
+    {
+      "attributes": {
+        "can_weight_optimized": false,
+        "maturity_factor": 1,
+        "unit_weight": 2.26
+      },
+      "last_updated": "2026-02-26T13:54:13Z",
+      "name": "CCA - FILTER CIRCULATOR, EVEN CAL",
+      "part_number": "20547110-4"
+    }
+  ],
+  "relationships": [],
+  "root_part_number": "20547110-4",
+  "signature": "628416a1ece0cf26e92990a9e7c004fbf6065941338327e228bd02c8315d3355",
+  "snapshot_id": "snap_20260226_135432_3ddabde8"
+}
