@@ -19,7 +19,12 @@ from streamlit_ui.grid_edit import (
     reconcile_parts,
 )
 from streamlit_ui.helpers import format_timestamp
-from streamlit_ui.restructure import apply_assembly_swap, plan_assembly_swap
+from streamlit_ui.restructure import (
+    apply_assembly_dissolve,
+    apply_assembly_swap,
+    plan_assembly_dissolve,
+    plan_assembly_swap,
+)
 
 GRID_VERSION_KEY = "_edit_grid_v"
 BULK_PREVIEW_KEY = "_bulk_preview"
@@ -473,6 +478,43 @@ def _render_replace_assembly(ctx: AppContext, version: int) -> None:
             _finish_commit(ctx, errors, notes, version)
 
 
+def _render_dissolve_assembly(ctx: AppContext, version: int) -> None:
+    parents = {str(r.get("parent_part_number", "")).strip() for r in ctx.relationships}
+    children = {str(r.get("child_part_number", "")).strip() for r in ctx.relationships}
+    # Middle levels only: something above AND below.
+    dissolvable = sorted(p for p in parents & children if p)
+    if not dissolvable:
+        return
+
+    with st.expander("Remove a grouping level (dissolve an assembly)"):
+        st.caption(
+            "Take one assembly out of the middle of the tree: its subparts move up to its "
+            "parent (quantities multiply through), the assembly itself is removed, and the "
+            "total weight is unchanged. Handy for retiring manual grouping parts now that "
+            "**Group by** handles families automatically. Saves immediately."
+        )
+        target = st.selectbox(
+            "Assembly to dissolve", options=dissolvable, key=f"dissolve_target_{version}"
+        )
+        plan = plan_assembly_dissolve(target, ctx.parts, ctx.relationships)
+        for error in plan.errors:
+            st.warning(error)
+        if not plan.errors:
+            parents_involved = sorted({l["parent_part_number"] for l in plan.new_links})
+            st.caption(
+                f"Will move {len(plan.new_links)} subpart link(s) up under "
+                f"{', '.join(f'**{p}**' for p in parents_involved)} and remove **{target}**."
+            )
+        if st.button(
+            "Dissolve assembly",
+            type="primary",
+            disabled=bool(plan.errors),
+            key=f"dissolve_apply_{version}",
+        ):
+            errors, notes = apply_assembly_dissolve(ctx.live_backend, plan)
+            _finish_commit(ctx, errors, notes, version)
+
+
 # ── the tab ───────────────────────────────────────────────────────────────────
 def render_edit_tab(ctx: AppContext, root_part_number: str = "") -> None:
     read_only = ctx.snapshot_mode
@@ -580,6 +622,7 @@ def render_edit_tab(ctx: AppContext, root_part_number: str = "") -> None:
         _render_quick_add(ctx, part_numbers, default_parent, version)
         _render_bulk_add(ctx, part_numbers, default_parent, version)
         _render_replace_assembly(ctx, version)
+        _render_dissolve_assembly(ctx, version)
 
     # ── Save row for grid edits ───────────────────────────────────────────────
     parts_plan = reconcile_parts(parts_grid, edited_parts.to_dict("records"))

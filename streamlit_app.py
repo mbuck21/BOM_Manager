@@ -15,7 +15,11 @@ from streamlit_ui.tabs import (
     render_edit_tab,
     render_weight_tab,
 )
-from streamlit_ui.tabs.reports import render_part_history, render_weekly_report
+from streamlit_ui.tabs.reports import (
+    render_part_history,
+    render_weekly_report,
+    render_weight_over_time,
+)
 
 LIVE_DATA_OPTION = "__live_data__"
 DATA_DIR_KEY = "data_dir"
@@ -326,6 +330,9 @@ def render_history_tab(ctx: AppContext) -> None:
 
     st.divider()
     universal_root = st.session_state.get(UNIVERSAL_ROOT_PART_KEY, "")
+    render_weight_over_time(ctx, universal_root)
+
+    st.divider()
     sub_report, sub_compare, sub_part = st.tabs(
         ["Weekly report", "Compare versions", "Part history"]
     )

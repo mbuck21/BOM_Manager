@@ -12,7 +12,12 @@ from streamlit_ui.report import (
     report_to_text,
     stale_parts,
 )
-from streamlit_ui.restructure import apply_assembly_swap, plan_assembly_swap
+from streamlit_ui.restructure import (
+    apply_assembly_dissolve,
+    apply_assembly_swap,
+    plan_assembly_dissolve,
+    plan_assembly_swap,
+)
 from streamlit_ui.rollup_views import (
     attribute_coverage,
     direct_child_totals,
@@ -257,6 +262,72 @@ class TestAssemblySwap(unittest.TestCase):
         self.assertTrue(plan_assembly_swap("OLD", "NEW", "", [], parts, rels).errors)  # new needs name
         self.assertTrue(plan_assembly_swap("OLD", "NEW", "x", ["NOPE"], parts, rels).errors)
         self.assertTrue(plan_assembly_swap("MISSING", "NEW", "x", [], parts, rels).errors)
+
+
+# ── assembly dissolve ─────────────────────────────────────────────────────────
+class TestAssemblyDissolve(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.b = BOMBackend(data_dir=self.tmp.name)
+        for pn, name, attrs in (
+            ("TOP", "Top", {}),
+            ("GROUP", "Manual group", {}),
+            ("C1", "Child 1", {"unit_weight": 2.0}),
+            ("C2", "Child 2", {"unit_weight": 5.0}),
+        ):
+            self.b.parts.add_or_update_part(pn, name, attrs)
+        self.b.bom.add_or_update_relationship("TOP", "GROUP", qty=2, rel_id="R_TG")
+        self.b.bom.add_or_update_relationship("GROUP", "C1", qty=3, rel_id="R_G1")
+        self.b.bom.add_or_update_relationship("GROUP", "C2", qty=4, rel_id="R_G2")
+        # TOP also links C1 directly — dissolve must fold quantities together.
+        self.b.bom.add_or_update_relationship("TOP", "C1", qty=1, rel_id="R_T1")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def _records(self):
+        parts = [
+            {"part_number": p.part_number, "name": p.name, "attributes": p.attributes}
+            for p in self.b.part_repo.list_parts()
+        ]
+        rels = [
+            {
+                "rel_id": r.rel_id,
+                "parent_part_number": r.parent_part_number,
+                "child_part_number": r.child_part_number,
+                "qty": r.qty,
+            }
+            for r in self.b.relationship_repo.list_relationships()
+        ]
+        return parts, rels
+
+    def test_dissolve_preserves_rollup_and_merges_quantities(self) -> None:
+        before = self.b.rollups.rollup_weight_with_maturity("TOP", include_root=True)["data"]["total"]
+        parts, rels = self._records()
+        plan = plan_assembly_dissolve("GROUP", parts, rels)
+        self.assertEqual(plan.errors, [])
+
+        errors, notes = apply_assembly_dissolve(self.b, plan)
+        self.assertEqual(errors, [])
+        self.assertTrue(any("GROUP" in n for n in notes))
+
+        after = self.b.rollups.rollup_weight_with_maturity("TOP", include_root=True)["data"]["total"]
+        self.assertAlmostEqual(before, after)  # 2*3*2 + 2*4*5 + 1*2 = 54
+
+        self.assertIsNone(self.b.part_repo.get("GROUP"))
+        rels_after = {
+            (r.parent_part_number, r.child_part_number): r.qty
+            for r in self.b.relationship_repo.list_relationships()
+        }
+        # C1: existing direct qty 1 + through-group 2*3 = 7; C2: 2*4 = 8.
+        self.assertEqual(rels_after, {("TOP", "C1"): 7.0, ("TOP", "C2"): 8.0})
+
+    def test_dissolve_validation(self) -> None:
+        parts, rels = self._records()
+        self.assertTrue(plan_assembly_dissolve("TOP", parts, rels).errors)   # no parents
+        self.assertTrue(plan_assembly_dissolve("C2", parts, rels).errors)    # no children
+        self.assertTrue(plan_assembly_dissolve("NOPE", parts, rels).errors)  # missing
+        self.assertTrue(plan_assembly_dissolve("", parts, rels).errors)
 
 
 # ── weekly report / part history / staleness ─────────────────────────────────

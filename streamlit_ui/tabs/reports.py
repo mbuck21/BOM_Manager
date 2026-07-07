@@ -47,6 +47,88 @@ def _live_snapshot_object(ctx: AppContext, root_part_number: str):
     )
 
 
+def render_weight_over_time(ctx: AppContext, root_part_number: str) -> None:
+    """Line chart of the selected root's rollup weight across all saved versions."""
+    if not root_part_number:
+        return
+    snapshots = list(ctx.snapshots)
+    if len(snapshots) < 2:
+        return
+
+    points: list[dict[str, Any]] = []
+    for record in snapshots:  # already oldest-first
+        backend = _build_snapshot_backend(record)
+        result = backend.rollups.rollup_weight_with_maturity(
+            root_part_number=root_part_number, include_root=True, top_n=1
+        )
+        if not result.get("ok"):
+            continue  # root not present in this version
+        points.append(
+            {
+                "when": str(record.get("created_at", "")).strip(),
+                "weight": float(result["data"].get("total", 0) or 0),
+                "version": str(record.get("label") or "").strip() or "(auto-save)",
+            }
+        )
+
+    # Close the line with the data as it is right now.
+    live_result = ctx.live_backend.rollups.rollup_weight_with_maturity(
+        root_part_number=root_part_number, include_root=True, top_n=1
+    )
+    if live_result.get("ok"):
+        points.append(
+            {
+                "when": now_iso_utc(),
+                "weight": float(live_result["data"].get("total", 0) or 0),
+                "version": "now (live)",
+            }
+        )
+
+    if len(points) < 2:
+        return
+
+    st.markdown(f"**Weight over time — {root_part_number}**")
+
+    import altair as alt
+    import pandas as pd
+
+    df = pd.DataFrame(points)
+    df["when"] = pd.to_datetime(df["when"], errors="coerce", utc=True)
+    df = df.dropna(subset=["when"])
+
+    line = (
+        alt.Chart(df)
+        .mark_line(point=True, color="#4C78A8")
+        .encode(
+            x=alt.X("when:T", title=None),
+            y=alt.Y("weight:Q", title="Weight (lbs)", scale=alt.Scale(zero=False)),
+            tooltip=[
+                alt.Tooltip("when:T", title="When", format="%b %d, %Y %H:%M"),
+                alt.Tooltip("weight:Q", title="Weight (lbs)", format=",.1f"),
+                alt.Tooltip("version:N", title="Version"),
+            ],
+        )
+    )
+    layers = [line]
+
+    live_root = next(
+        (p for p in ctx.live_backend.part_repo.list_parts() if p.part_number == root_part_number),
+        None,
+    )
+    budget = read_weight_budget(part_to_record(live_root)) if live_root else None
+    if budget is not None:
+        budget_df = pd.DataFrame([{"budget": budget}])
+        layers.append(
+            alt.Chart(budget_df)
+            .mark_rule(color="#D62728", strokeDash=[6, 4])
+            .encode(y="budget:Q", tooltip=[alt.Tooltip("budget:Q", title="Budget (lbs)", format=",.1f")])
+        )
+
+    st.altair_chart(alt.layer(*layers).properties(height=260), width="stretch")
+    if budget is not None:
+        st.caption("Dashed red line = weight budget.")
+
+
 def render_weekly_report(ctx: AppContext, root_part_number: str) -> None:
     st.caption(
         "What changed between a saved version and the data as it is right now — "
