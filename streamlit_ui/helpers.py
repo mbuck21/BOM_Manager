@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -30,48 +29,31 @@ def resolve_data_dir(raw_value: str) -> Path:
     return candidate.resolve()
 
 
-def parse_json_object(raw: str, field_name: str) -> dict[str, Any]:
-    text = raw.strip()
-    if not text:
-        return {}
-
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"{field_name} must be valid JSON: {exc.msg}") from exc
-
-    if not isinstance(parsed, dict):
-        raise ValueError(f"{field_name} must be a JSON object")
-    return parsed
+def part_key(record: dict[str, Any]) -> str:
+    """Normalized part number of a part/relationship-side record."""
+    return str(record.get("part_number", "")).strip()
 
 
-def part_rows(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "part_number": item["part_number"],
-            "name": item["name"],
-            "last_updated": item["last_updated"],
-            "attributes": json.dumps(item.get("attributes", {}), sort_keys=True),
-        }
-        for item in parts
-    ]
+def build_part_lookup(parts: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """part_number -> part record, skipping records with a blank part number."""
+    return {part_key(part): part for part in parts if part_key(part)}
 
 
-def relationship_rows(relationships: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        {
-            "rel_id": item["rel_id"],
-            "parent_part_number": item["parent_part_number"],
-            "child_part_number": item["child_part_number"],
-            "qty": item["qty"],
-            "last_updated": item["last_updated"],
-            "attributes": json.dumps(item.get("attributes", {}), sort_keys=True),
-        }
-        for item in relationships
-    ]
+def collect_service_result(
+    label: str,
+    result: dict[str, Any],
+    errors: list[str],
+    notes: list[str],
+) -> None:
+    """Fold one backend `{ok,errors,warnings}` result into shared error/note lists."""
+    if not result.get("ok"):
+        for error in result.get("errors", []):
+            errors.append(f"{label}: {error}")
+    for warning in result.get("warnings", []):
+        notes.append(f"{label}: {warning}")
 
 
-def show_service_result(title: str, result: dict[str, Any], *, show_data: bool = False) -> None:
+def show_service_result(title: str, result: dict[str, Any]) -> None:
     if result.get("ok"):
         st.success(f"{title} succeeded")
     else:
@@ -81,6 +63,3 @@ def show_service_result(title: str, result: dict[str, Any], *, show_data: bool =
         st.warning(warning)
     for error in result.get("errors", []):
         st.error(error)
-
-    if show_data and result.get("data"):
-        st.json(result["data"])

@@ -26,7 +26,11 @@ def render_group_by(
     )
 
     options = [FAMILY_OPTION] + [f"Column: {column}" for column in attribute_columns]
-    choice = st.selectbox("Group parts by", options=options)
+    choice = st.selectbox(
+        "Group parts by",
+        options=options,
+        help="Part family groups dash-number variants of one base drawing. Columns you add in Edit → Manage columns show up here too.",
+    )
     mode = FAMILY_MODE if choice == FAMILY_OPTION else ATTR_MODE_PREFIX + choice.removeprefix("Column: ")
 
     part_totals = rollup_data.get("part_totals", [])
@@ -107,7 +111,11 @@ def render_group_by(
 
     # ── Member drill-down ─────────────────────────────────────────────────────
     group_keys = [g["group"] for g in groups]
-    picked = st.selectbox("Show the parts inside a group", options=group_keys)
+    picked = st.selectbox(
+        "Show the parts inside a group",
+        options=group_keys,
+        help="Drill into one group to see which parts carry its weight.",
+    )
     picked_group = next((g for g in groups if g["group"] == picked), None)
     if picked_group:
         member_rows = [

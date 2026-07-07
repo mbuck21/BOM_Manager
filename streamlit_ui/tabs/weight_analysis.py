@@ -104,6 +104,7 @@ def render_reduction(
     with slider_col:
         top_n = st.slider(
             "Top contributors to show",
+            help="How many parts to draw in the chart. The ranking table below always shows all of them.",
             min_value=1,
             max_value=max(2, len(opp_rows)),
             value=min(15, max(2, len(opp_rows))),

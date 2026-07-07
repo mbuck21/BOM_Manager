@@ -11,7 +11,7 @@ from bom_backend.serialization import (
 )
 from bom_backend.utils.clock import now_iso_utc
 from streamlit_ui.context import AppContext, _build_snapshot_backend
-from streamlit_ui.helpers import format_timestamp
+from streamlit_ui.helpers import build_part_lookup, format_timestamp
 from streamlit_ui.report import (
     build_weekly_report,
     default_baseline_index,
@@ -184,9 +184,7 @@ def render_weekly_report(ctx: AppContext, root_part_number: str) -> None:
         return
 
     # Names from live + baseline (so removed parts still resolve).
-    part_lookup: dict[str, dict[str, Any]] = {
-        str(p.get("part_number", "")).strip(): p for p in baseline_record.get("parts", [])
-    }
+    part_lookup = build_part_lookup(baseline_record.get("parts", []))
     for p in ctx.live_backend.part_repo.list_parts():
         part_lookup[p.part_number] = part_to_record(p)
 
@@ -290,7 +288,11 @@ def render_part_history(ctx: AppContext) -> None:
         st.info("No parts to show history for.")
         return
 
-    picked = st.selectbox("Part", options=sorted(part_numbers))
+    picked = st.selectbox(
+        "Part",
+        options=sorted(part_numbers),
+        help="Includes parts that were later removed — their history is still in the saved versions.",
+    )
     events = part_history(snapshots, picked)
     if not events:
         st.info("This part has no recorded changes in the saved versions.")

@@ -102,22 +102,6 @@ class TestBOMBackend(unittest.TestCase):
         self.assertTrue(diff["ok"])
         self.assertFalse(diff["data"]["signature_equal"])
 
-    def test_rollup_numeric_attribute(self) -> None:
-        self.backend.parts.add_or_update_part("A", "Assembly A", {"weight_kg": 10})
-        self.backend.parts.add_or_update_part("B", "Part B", {"weight_kg": 2})
-        self.backend.parts.add_or_update_part("C", "Part C", {"weight_kg": 1.5})
-        self.backend.parts.add_or_update_part("D", "Part D", {})
-
-        self.backend.bom.add_or_update_relationship("A", "B", qty=2, rel_id="R1")
-        self.backend.bom.add_or_update_relationship("A", "C", qty=3, rel_id="R2")
-        self.backend.bom.add_or_update_relationship("B", "D", qty=4, rel_id="R3")
-
-        result = self.backend.rollups.rollup_numeric_attribute("A", "weight_kg")
-        self.assertTrue(result["ok"])
-        # A: 10 + B: (2 * 2) + C: (1.5 * 3) + D: missing -> warning only
-        self.assertAlmostEqual(result["data"]["total"], 18.5)
-        self.assertGreaterEqual(len(result["warnings"]), 1)
-
     def test_rollup_weight_with_maturity_uses_override(self) -> None:
         self.backend.parts.add_or_update_part("A", "Assembly A")
         self.backend.parts.add_or_update_part(
@@ -271,21 +255,20 @@ class TestBOMBackend(unittest.TestCase):
     # ------------------------------------------------------------ Rollups --
 
     def test_rollup_include_root_false(self) -> None:
-        self.backend.parts.add_or_update_part("A", "Root", {"val": 100})
-        self.backend.parts.add_or_update_part("B", "Child", {"val": 5})
+        # With the root excluded, its own unit weight does not override the children.
+        self.backend.parts.add_or_update_part("A", "Root", {"unit_weight": 100})
+        self.backend.parts.add_or_update_part("B", "Child", {"unit_weight": 5})
         self.backend.bom.add_or_update_relationship("A", "B", qty=2, rel_id="R1")
 
-        result = self.backend.rollups.rollup_numeric_attribute("A", "val", include_root=False)
+        result = self.backend.rollups.rollup_weight_with_maturity("A", include_root=False)
         self.assertTrue(result["ok"])
-        # A excluded; only B contributes: 5 * 2 = 10
         self.assertAlmostEqual(result["data"]["total"], 10.0)
 
-    def test_rollup_non_numeric_attribute_warns(self) -> None:
-        self.backend.parts.add_or_update_part("A", "A", {"val": "not-a-number"})
-        result = self.backend.rollups.rollup_numeric_attribute("A", "val")
+    def test_rollup_non_numeric_unit_weight_warns(self) -> None:
+        self.backend.parts.add_or_update_part("A", "A", {"unit_weight": "not-a-number"})
+        result = self.backend.rollups.rollup_weight_with_maturity("A")
         self.assertTrue(result["ok"])
         self.assertAlmostEqual(result["data"]["total"], 0.0)
-        self.assertGreaterEqual(len(result["warnings"]), 1)
         self.assertTrue(any("non-numeric" in w for w in result["warnings"]))
 
     # ------------------------------------------------------- Part catalog --

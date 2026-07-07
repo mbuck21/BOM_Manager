@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import Any
 
 import pandas as pd
@@ -18,7 +19,7 @@ from streamlit_ui.grid_edit import (
     reconcile_bom,
     reconcile_parts,
 )
-from streamlit_ui.helpers import format_timestamp
+from streamlit_ui.helpers import collect_service_result, format_timestamp
 from streamlit_ui.restructure import (
     apply_assembly_dissolve,
     apply_assembly_swap,
@@ -157,13 +158,7 @@ def _apply_changes(ctx: AppContext, parts_plan, bom_plan) -> tuple[list[str], li
     backend = ctx.live_backend
     errors: list[str] = []
     notes: list[str] = []
-
-    def _collect(label: str, result: dict[str, Any]) -> None:
-        if not result.get("ok"):
-            for err in result.get("errors", []):
-                errors.append(f"{label}: {err}")
-        for warn in result.get("warnings", []):
-            notes.append(f"{label}: {warn}")
+    _collect = partial(collect_service_result, errors=errors, notes=notes)
 
     with backend.store.batch():
         # 1. Create/update parts (so links added below can reference them).
@@ -239,6 +234,7 @@ def _render_manage_columns(ctx: AppContext, version: int) -> None:
             choices_text = st.text_input(
                 "Choices (comma-separated — only for dropdown)",
                 placeholder="measured, Creo estimate, vendor quote",
+                help="The allowed values for a dropdown column. Re-enter the same column name later to change them.",
             )
             submitted = st.form_submit_button("Add / update column")
 
@@ -312,6 +308,7 @@ def _render_quick_add(ctx: AppContext, part_numbers: list[str], default_parent: 
                 "Under assembly (parent)",
                 options=part_numbers,
                 index=part_numbers.index(default_parent) if default_parent in part_numbers else 0,
+                help="The assembly the new part goes into.",
             )
             pn_col, name_col = st.columns(2)
             with pn_col:
@@ -322,7 +319,11 @@ def _render_quick_add(ctx: AppContext, part_numbers: list[str], default_parent: 
             with qty_col:
                 qty = st.number_input("Qty", min_value=0.0001, value=1.0, step=1.0, format="%.4f")
             with weight_col:
-                weight_text = st.text_input("Unit weight (optional)", placeholder="1.25")
+                weight_text = st.text_input(
+                    "Unit weight (optional)",
+                    placeholder="1.25",
+                    help="Leave blank if this part will roll up from children you add later.",
+                )
             submitted = st.form_submit_button("Add part", type="primary")
 
         if submitted:
@@ -352,11 +353,13 @@ def _render_bulk_add(ctx: AppContext, part_numbers: list[str], default_parent: s
             options=part_numbers,
             index=part_numbers.index(default_parent) if default_parent in part_numbers else 0,
             key=f"bulk_parent_{version}",
+            help="Every pasted part is linked under this assembly.",
         )
         with st.form(f"bulk_form_{version}"):
             text = st.text_area(
                 "Rows",
                 height=140,
+                help="Column order: part number, name, qty, unit weight. Tabs (Excel paste) or commas both work; qty and weight are optional.",
                 placeholder=(
                     "20547099-101\tBRACKET, UPPER\t2\t1.25\n"
                     "20547099-102, BRACKET, 4, 0.8\n"
@@ -432,7 +435,10 @@ def _render_replace_assembly(ctx: AppContext, version: int) -> None:
             "Saves immediately."
         )
         old_pn = st.selectbox(
-            "Assembly being replaced", options=assemblies, key=f"swap_old_{version}"
+            "Assembly being replaced",
+            options=assemblies,
+            key=f"swap_old_{version}",
+            help="The new assembly will take this one's place everywhere it is used.",
         )
         children = sorted(
             {
@@ -451,6 +457,7 @@ def _render_replace_assembly(ctx: AppContext, version: int) -> None:
             options=children,
             default=children,
             key=f"swap_carry_{version}",
+            help="Unticked subparts stay in the project but lose their link to this assembly.",
         )
 
         plan = plan_assembly_swap(
@@ -494,7 +501,10 @@ def _render_dissolve_assembly(ctx: AppContext, version: int) -> None:
             "**Group by** handles families automatically. Saves immediately."
         )
         target = st.selectbox(
-            "Assembly to dissolve", options=dissolvable, key=f"dissolve_target_{version}"
+            "Assembly to dissolve",
+            options=dissolvable,
+            key=f"dissolve_target_{version}",
+            help="Its subparts move up to its parent with quantities multiplied through; total weight is unchanged.",
         )
         plan = plan_assembly_dissolve(target, ctx.parts, ctx.relationships)
         for error in plan.errors:

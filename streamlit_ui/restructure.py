@@ -15,7 +15,10 @@ Everything applies inside one store.batch() so it lands as a single atomic save.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any
+
+from streamlit_ui.helpers import collect_service_result
 
 
 @dataclass
@@ -124,12 +127,7 @@ def apply_assembly_swap(backend: Any, plan: SwapPlan) -> tuple[list[str], list[s
     errors: list[str] = []
     notes: list[str] = []
 
-    def _collect(label: str, result: dict[str, Any]) -> None:
-        if not result.get("ok"):
-            for err in result.get("errors", []):
-                errors.append(f"{label}: {err}")
-        for warning in result.get("warnings", []):
-            notes.append(f"{label}: {warning}")
+    _collect = partial(collect_service_result, errors=errors, notes=notes)
 
     try:
         with backend.store.batch():
@@ -279,12 +277,7 @@ def apply_assembly_dissolve(backend: Any, plan: DissolvePlan) -> tuple[list[str]
     errors: list[str] = []
     notes: list[str] = []
 
-    def _collect(label: str, result: dict[str, Any]) -> None:
-        if not result.get("ok"):
-            for err in result.get("errors", []):
-                errors.append(f"{label}: {err}")
-        for warning in result.get("warnings", []):
-            notes.append(f"{label}: {warning}")
+    _collect = partial(collect_service_result, errors=errors, notes=notes)
 
     try:
         with backend.store.batch():

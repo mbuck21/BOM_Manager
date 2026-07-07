@@ -241,9 +241,19 @@ def render_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
 
     col_a, col_b = st.columns(2)
     with col_a:
-        selection_a = st.selectbox("Snapshot A (Before)", options=snapshot_labels, index=default_a)
+        selection_a = st.selectbox(
+            "Snapshot A (Before)",
+            options=snapshot_labels,
+            index=default_a,
+            help="The older version — the starting point of the comparison.",
+        )
     with col_b:
-        selection_b = st.selectbox("Snapshot B (After)", options=snapshot_labels, index=default_b)
+        selection_b = st.selectbox(
+            "Snapshot B (After)",
+            options=snapshot_labels,
+            index=default_b,
+            help="The newer version — changes are reported as A → B.",
+        )
 
     map_label_to_snapshot = dict(zip(snapshot_labels, latest_snapshots))
 

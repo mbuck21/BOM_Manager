@@ -17,7 +17,7 @@ from streamlit_ui.rollup_views import (
 from streamlit_ui.tabs.dashboard import render_overview
 from streamlit_ui.tabs.families import render_group_by
 from streamlit_ui.tabs.weight_analysis import render_reduction
-from streamlit_ui.helpers import show_service_result
+from streamlit_ui.helpers import build_part_lookup, show_service_result
 
 
 def _grouping_columns(ctx: AppContext, parts: list[dict[str, Any]]) -> list[str]:
@@ -53,6 +53,7 @@ def _render_budget_row(ctx: AppContext, root_part: dict[str, Any], root_pn: str,
             with st.form(f"budget_form_{root_pn}"):
                 new_budget = st.number_input(
                     f"Weight budget for {root_pn} (lbs)",
+                    help="The not-to-exceed target for this assembly. Margin above turns red when the rollup passes it.",
                     min_value=0.0,
                     value=float(budget) if budget is not None else float(round(total, 1)),
                     step=10.0,
@@ -195,7 +196,7 @@ def render_weight_tab(
         st.info("No parts found. Add parts first or load a different version.")
         return
 
-    part_lookup = {str(item.get("part_number", "")).strip(): item for item in ctx.parts}
+    part_lookup = build_part_lookup(ctx.parts)
     root_options = sorted(part_lookup.keys())
     if root_part_number not in root_options and root_options:
         fallback_root = root_options[0]

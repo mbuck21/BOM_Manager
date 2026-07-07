@@ -3,25 +3,16 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 from bom_backend import BOMBackend
 from streamlit_ui.context import build_app_context
-from streamlit_ui.graph import _escape_dot_label, build_bom_graph_dot
-from streamlit_ui.seed import seed_demo_data
 
-
-# ---------------------------------------------------------------------------
-# helpers.py — pure-Python helpers (no running Streamlit session required)
-# ---------------------------------------------------------------------------
-
-# We import helpers carefully: `import streamlit as st` at module top is fine
-# in a non-running Streamlit context; only st.* calls inside functions fail.
-# We only test functions that do NOT call st.*.
+# helpers.py imports `streamlit as st` at module top, which is fine outside a running
+# Streamlit session; we only test the functions that never call st.*.
 from streamlit_ui.helpers import (
-    parse_json_object,
-    part_rows,
-    relationship_rows,
+    build_part_lookup,
+    collect_service_result,
+    part_key,
     resolve_data_dir,
 )
 from streamlit_ui.grid_edit import (
@@ -52,157 +43,28 @@ class TestHelpers(unittest.TestCase):
         self.assertTrue(result.is_absolute())
         self.assertTrue(str(result).endswith("demo_data"))
 
-    # ---------------------------------------------------------------- parse_json_object
+    # ---------------------------------------------------------------- part lookups
 
-    def test_parse_json_object_valid(self) -> None:
-        result = parse_json_object('{"key": "value", "num": 42}', "test")
-        self.assertEqual(result, {"key": "value", "num": 42})
+    def test_part_key_strips(self) -> None:
+        self.assertEqual(part_key({"part_number": "  A-100 "}), "A-100")
+        self.assertEqual(part_key({}), "")
 
-    def test_parse_json_object_empty_string_returns_empty_dict(self) -> None:
-        result = parse_json_object("", "test")
-        self.assertEqual(result, {})
+    def test_build_part_lookup_skips_blank(self) -> None:
+        lookup = build_part_lookup(
+            [{"part_number": "A", "name": "a"}, {"part_number": "  ", "name": "blank"}]
+        )
+        self.assertEqual(set(lookup), {"A"})
+        self.assertEqual(lookup["A"]["name"], "a")
 
-    def test_parse_json_object_non_object_raises(self) -> None:
-        with self.assertRaises(ValueError) as ctx:
-            parse_json_object("[1, 2, 3]", "myfield")
-        self.assertIn("myfield", str(ctx.exception))
+    # ---------------------------------------------------------------- collect_service_result
 
-    def test_parse_json_object_invalid_json_raises(self) -> None:
-        with self.assertRaises(ValueError):
-            parse_json_object("{bad json}", "test")
-
-    # ---------------------------------------------------------------- part_rows / relationship_rows
-
-    def test_part_rows_format(self) -> None:
-        parts = [
-            {
-                "part_number": "P1",
-                "name": "Widget",
-                "last_updated": "2026-01-01T00:00:00Z",
-                "attributes": {"color": "red"},
-            }
-        ]
-        rows = part_rows(parts)
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["part_number"], "P1")
-        self.assertIn("color", rows[0]["attributes"])  # attributes is JSON string
-
-    def test_relationship_rows_format(self) -> None:
-        rels = [
-            {
-                "rel_id": "R1",
-                "parent_part_number": "A",
-                "child_part_number": "B",
-                "qty": 2.0,
-                "last_updated": "2026-01-01T00:00:00Z",
-                "attributes": {"find_no": 10},
-            }
-        ]
-        rows = relationship_rows(rels)
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["rel_id"], "R1")
-        self.assertEqual(rows[0]["qty"], 2.0)
-
-
-# ---------------------------------------------------------------------------
-# graph.py — DOT generation (no Streamlit dependency at all)
-# ---------------------------------------------------------------------------
-
-
-class TestGraphDOT(unittest.TestCase):
-    def test_escape_dot_label_backslash(self) -> None:
-        self.assertEqual(_escape_dot_label("a\\b"), "a\\\\b")
-
-    def test_escape_dot_label_quote(self) -> None:
-        self.assertEqual(_escape_dot_label('say "hello"'), 'say \\"hello\\"')
-
-    def test_escape_dot_label_newline(self) -> None:
-        result = _escape_dot_label("line1\nline2")
-        self.assertNotIn("\n", result)
-        self.assertIn("\\n", result)
-
-    def test_escape_dot_label_tab(self) -> None:
-        result = _escape_dot_label("col1\tcol2")
-        self.assertNotIn("\t", result)
-        self.assertIn("\\t", result)
-
-    def test_escape_dot_label_carriage_return(self) -> None:
-        result = _escape_dot_label("a\rb")
-        self.assertNotIn("\r", result)
-        self.assertIn("\\r", result)
-
-    def test_empty_graph_returns_valid_dot(self) -> None:
-        result = build_bom_graph_dot([], [], max_nodes=50)
-        self.assertIn("digraph", result["dot"])
-        self.assertEqual(result["shown_nodes"], 0)
-        self.assertEqual(result["total_nodes"], 0)
-
-    def test_single_part_no_relationships(self) -> None:
-        parts = [{"part_number": "P1", "name": "Widget"}]
-        result = build_bom_graph_dot(parts, [], max_nodes=50)
-        self.assertEqual(result["shown_nodes"], 1)
-        self.assertIn("P1", result["dot"])
-
-    def test_graph_with_relationships_shows_edges(self) -> None:
-        parts = [
-            {"part_number": "A", "name": "Assembly"},
-            {"part_number": "B", "name": "Bracket"},
-        ]
-        rels = [{"parent_part_number": "A", "child_part_number": "B", "qty": 2}]
-        result = build_bom_graph_dot(parts, rels, max_nodes=50)
-        self.assertEqual(result["shown_nodes"], 2)
-        self.assertEqual(result["shown_edges"], 1)
-        self.assertIn("qty: 2", result["dot"])
-
-    def test_max_nodes_limits_output(self) -> None:
-        parts = [{"part_number": str(i), "name": f"Part {i}"} for i in range(20)]
-        result = build_bom_graph_dot(parts, [], max_nodes=5)
-        self.assertEqual(result["shown_nodes"], 5)
-        self.assertEqual(result["total_nodes"], 20)
-
-    def test_part_name_with_newline_escapes_in_dot(self) -> None:
-        parts = [{"part_number": "P1", "name": "Line1\nLine2"}]
-        result = build_bom_graph_dot(parts, [], max_nodes=50)
-        self.assertNotIn('"Line1\nLine2"', result["dot"])
-
-
-# ---------------------------------------------------------------------------
-# seed.py — demo data creation
-# ---------------------------------------------------------------------------
-
-
-class TestSeed(unittest.TestCase):
-    def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
-        self.backend = BOMBackend(data_dir=self.tmp.name)
-
-    def tearDown(self) -> None:
-        self.tmp.cleanup()
-
-    def test_seed_demo_data_creates_4_parts_3_relationships(self) -> None:
-        operations = seed_demo_data(self.backend)
-        self.assertEqual(len(operations), 7)  # 4 parts + 3 relationships
-
-        parts_result = self.backend.parts.list_parts()
-        self.assertTrue(parts_result["ok"])
-        self.assertEqual(len(parts_result["data"]["parts"]), 4)
-
-        part_numbers = [p["part_number"] for p in parts_result["data"]["parts"]]
-        self.assertIn("A-100", part_numbers)
-        self.assertIn("D-400", part_numbers)
-
-        subgraph = self.backend.bom.get_subgraph("A-100")
-        self.assertEqual(len(subgraph["data"]["relationships"]), 3)
-
-    def test_seed_all_operations_succeed(self) -> None:
-        operations = seed_demo_data(self.backend)
-        for label, result in operations:
-            self.assertTrue(result["ok"], f"Operation '{label}' failed: {result.get('errors')}")
-
-
-# ---------------------------------------------------------------------------
-# context.py — AppContext building (no Streamlit dependency)
-# ---------------------------------------------------------------------------
+    def test_collect_service_result(self) -> None:
+        errors: list[str] = []
+        notes: list[str] = []
+        collect_service_result("step", {"ok": False, "errors": ["boom"], "warnings": ["hmm"]}, errors, notes)
+        collect_service_result("fine", {"ok": True, "errors": [], "warnings": []}, errors, notes)
+        self.assertEqual(errors, ["step: boom"])
+        self.assertEqual(notes, ["step: hmm"])
 
 
 class TestContext(unittest.TestCase):

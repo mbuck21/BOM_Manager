@@ -1,7 +1,5 @@
 # Mass Allocation Tracking Tool (BOM Manager)
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mbuck21/BOM_Manager)
-
 A side tool for engineers who own a **weight rollup**: keep a bill of materials with unit
 weights, edit it like a spreadsheet, and instantly see assembly weights, budget margin,
 reduction opportunities, and what changed since last week. Every save is versioned, so
@@ -9,6 +7,13 @@ history and weekly reporting come for free.
 
 It is **not** a parts-data-management system — it's the fast, local scratchpad for
 understanding and reporting weight.
+
+> **Point of contact:** Matt Buckley — <matthew.p.buckley@lmco.com> — for bugs, feature
+> ideas, or help getting the tool running.
+>
+> This tool was built with AI assistance (Anthropic Claude), guided and reviewed by the
+> maintainer. Developers: see [`ARCHITECTURE.md`](ARCHITECTURE.md) for how the code is
+> organized.
 
 ## Get up and running
 
@@ -144,18 +149,18 @@ to point it at your own folder (a fresh empty project is created automatically).
 multi-file layouts (`parts.json` + `relationships.json` + `snapshots/`) are migrated into
 the single file automatically and non-destructively on first open.
 
+## Getting help
+
+- **Hover any ⓘ icon in the app** — every major control has a one-line explanation.
+- The sidebar's **About / getting help** box has the quick workflow reminder.
+- Stuck, found a bug, or want a feature? **Contact Matt Buckley —
+  <matthew.p.buckley@lmco.com>.**
+
 ## Running tests
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
-
-## GitHub Codespaces (no local setup)
-
-Open the repo → **Code** → **Codespaces** → **Create codespace on main**. Dependencies
-install automatically and Streamlit starts in the background; open the forwarded port
-8501 when prompted. Inside the codespace: `make run`, `make test`,
-`tail -f /tmp/streamlit.log`.
 
 ---
 
@@ -195,14 +200,13 @@ Check `ok` first; read the payload from `data`.
 
 ### `backend.rollups`
 
-1. `rollup_numeric_attribute(root_part_number, attribute_key, include_root=True)`.
-2. `rollup_weight_with_maturity(root_part_number, unit_weight_key="unit_weight",
+1. `rollup_weight_with_maturity(root_part_number, unit_weight_key="unit_weight",
    maturity_factor_key="maturity_factor", default_maturity_factor=1.0, include_root=True,
    top_n=10)` — the weight engine: a part with `unit_weight` contributes
    `unit_weight × maturity_factor × path qty` and its subtree is not traversed (allocation
    override). Returns `data.total`, `data.breakdown` (per path), `data.part_totals`
    (per part), `data.top_contributors`, `data.unresolved_nodes`.
-3. `subtree_weight_map(default_maturity_factor=1.0)` — effective subtree weight for every
+2. `subtree_weight_map(default_maturity_factor=1.0)` — effective subtree weight for every
    part in one pass; returns `data.weights` (`{part_number: weight}`).
 
 ### `backend.snapshots` (version history)

@@ -76,6 +76,7 @@ def render_overview(
         visible_count = sum(1 for r in display_rows if r["weight_plus_maturity"] > 0) or 1
         visual_limit = st.number_input(
             "Children shown",
+            help="How many bars to draw. The table below always shows every child.",
             min_value=1,
             max_value=max(1, len(display_rows)),
             value=min(12, visible_count),
