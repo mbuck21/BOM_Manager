@@ -113,6 +113,11 @@ Budget / Actual / Margin then shows on top, red when over.
 to the newest version at least a week old) → copy the text block at the bottom into your
 update.
 
+**Rename, re-date, or delete saved versions.** History tab → *Manage versions* → edit the
+**When** or **Label** cells in place, or delete a row to remove that version, then
+**Apply version changes**. Deleting is permanent; pruning old auto-saves keeps the data
+file small.
+
 **See weight by drawing family, or structural vs non-structural.** Weight & Rollup →
 *Group by*. "Part family" groups `-1/-2/-501` variants of the same base drawing together;
 or group by any column you've added (e.g. `category`).

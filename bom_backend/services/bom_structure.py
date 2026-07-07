@@ -248,13 +248,20 @@ class BOMStructureService:
 
         subgraph_relationships: list[Relationship] = []
 
+        # Index once — per-node find_children/get calls re-read the data file each time
+        # (see the performance invariant in CLAUDE.md).
+        children_by_parent: dict[str, list[Relationship]] = {}
+        for relationship in self.relationship_repo.list_relationships():
+            children_by_parent.setdefault(relationship.parent_part_number, []).append(relationship)
+        parts_by_number = {part.part_number: part for part in self.part_repo.list_parts()}
+
         while queue:
             current = queue.popleft()
             if current in visited_nodes:
                 continue
 
             visited_nodes.add(current)
-            for relationship in self.relationship_repo.find_children(current):
+            for relationship in children_by_parent.get(current, []):
                 if relationship.rel_id in visited_relationship_ids:
                     continue
 
@@ -265,7 +272,7 @@ class BOMStructureService:
         parts: list[dict[str, Any]] = []
         missing_parts: list[str] = []
         for part_number in sorted(visited_nodes):
-            part = self.part_repo.get(part_number)
+            part = parts_by_number.get(part_number)
             if part is None:
                 missing_parts.append(part_number)
                 continue

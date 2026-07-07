@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import Any
 
 import streamlit as st
 
 from streamlit_ui.context import AppContext
-from streamlit_ui.helpers import format_timestamp, show_service_result
+from streamlit_ui.helpers import collect_service_result, format_timestamp, show_service_result
+from streamlit_ui.report import plan_version_edits
 from streamlit_ui.state import (
     ACTIVE_SNAPSHOT_ID_KEY,
     LIVE_DATA_OPTION,
@@ -20,6 +22,8 @@ from streamlit_ui.tabs.reports import (
     render_weekly_report,
     render_weight_over_time,
 )
+
+MANAGE_VERSIONS_KEY = "_manage_versions_v"
 
 
 def _snapshot_option_label(snapshot: dict[str, Any], latest_snapshot_id: str | None) -> str:
@@ -79,6 +83,125 @@ def render_snapshot_selector(ctx: AppContext) -> None:
         st.caption("Viewing live data (editable).")
 
 
+def _render_manage_versions(ctx: AppContext) -> None:
+    if ctx.snapshot_mode or not ctx.snapshots:
+        return
+
+    import pandas as pd
+
+    version = st.session_state.get(MANAGE_VERSIONS_KEY, 0)
+
+    with st.expander("Manage versions (rename, re-date, delete)"):
+        st.caption(
+            "Edit a version's **When** or **Label** in place, or delete its row to prune "
+            "history. Deleting is permanent — the version disappears from the chart, "
+            "weekly report, and part history. Pruning old auto-saves also keeps the data "
+            "file small and the app snappy."
+        )
+
+        baseline_rows = []
+        grid_rows = []
+        for snapshot in reversed(ctx.snapshots):  # newest first
+            snapshot_id = str(snapshot.get("snapshot_id", "")).strip()
+            created_at = str(snapshot.get("created_at", "")).strip()
+            label = str(snapshot.get("label") or "").strip()
+            baseline_rows.append(
+                {"snapshot_id": snapshot_id, "created_at": created_at, "label": label}
+            )
+            grid_rows.append(
+                {
+                    "snapshot_id": snapshot_id,
+                    "When": created_at,
+                    "Label": label,
+                    "Scope": str(snapshot.get("root_part_number", "")).strip() or "whole project",
+                    "Parts": len(snapshot.get("parts") or []),
+                }
+            )
+        df = pd.DataFrame(grid_rows)
+        df["When"] = pd.to_datetime(df["When"], errors="coerce", utc=True)
+
+        edited = st.data_editor(
+            df,
+            key=f"manage_versions_editor_{version}",
+            num_rows="dynamic",
+            width="stretch",
+            hide_index=True,
+            column_order=["When", "Label", "Scope", "Parts"],
+            column_config={
+                "When": st.column_config.DatetimeColumn(
+                    "When", format="MMM DD, YYYY HH:mm", help="Edit to re-date the version."
+                ),
+                "Label": st.column_config.TextColumn(
+                    "Label", help="Name the version, e.g. 'PDR baseline'. Blank = auto-save."
+                ),
+                "Scope": st.column_config.TextColumn("Scope", disabled=True),
+                "Parts": st.column_config.NumberColumn("Parts", disabled=True),
+            },
+        )
+
+        edited_rows = []
+        for record in edited.to_dict("records"):
+            when = record.get("When")
+            if when is not None and pd.notna(when):
+                stamp = pd.Timestamp(when)
+                if stamp.tzinfo is not None:
+                    stamp = stamp.tz_convert("UTC")
+                iso = stamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                iso = ""
+            edited_rows.append(
+                {
+                    "snapshot_id": record.get("snapshot_id"),
+                    "label": record.get("Label"),
+                    "created_at": iso,
+                }
+            )
+
+        plan = plan_version_edits(baseline_rows, edited_rows)
+        changed = bool(plan["updates"] or plan["deletes"])
+        if changed:
+            bits = []
+            if plan["updates"]:
+                bits.append(f"{len(plan['updates'])} version(s) edited")
+            if plan["deletes"]:
+                bits.append(f"{len(plan['deletes'])} version(s) will be DELETED")
+            st.caption(" · ".join(bits))
+
+        if st.button(
+            "Apply version changes",
+            type="primary",
+            disabled=not changed,
+            key=f"apply_versions_{version}",
+        ):
+            errors: list[str] = []
+            notes: list[str] = []
+            _collect = partial(collect_service_result, errors=errors, notes=notes)
+            with ctx.live_backend.store.batch():
+                for update in plan["updates"]:
+                    _collect(
+                        f"Update {update['snapshot_id']}",
+                        ctx.live_backend.snapshots.update_snapshot(
+                            update["snapshot_id"],
+                            label=update["label"],
+                            created_at=update["created_at"],
+                        ),
+                    )
+                for snapshot_id in plan["deletes"]:
+                    _collect(
+                        f"Delete {snapshot_id}",
+                        ctx.live_backend.snapshots.delete_snapshot(snapshot_id),
+                    )
+            for note in notes:
+                st.info(note)
+            if errors:
+                st.error("Some changes could not be applied:")
+                for err in errors:
+                    st.write(f"- {err}")
+            else:
+                st.session_state[MANAGE_VERSIONS_KEY] = version + 1
+                st.rerun()
+
+
 def render_history_tab(ctx: AppContext) -> None:
     st.subheader("Save a Version")
     st.caption(
@@ -107,6 +230,7 @@ def render_history_tab(ctx: AppContext) -> None:
 
     st.divider()
     render_snapshot_selector(ctx)
+    _render_manage_versions(ctx)
 
     st.divider()
     universal_root = st.session_state.get(UNIVERSAL_ROOT_PART_KEY, "")

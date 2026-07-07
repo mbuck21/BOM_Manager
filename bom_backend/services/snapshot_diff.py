@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import uuid4
 
 from bom_backend.models import Part, Relationship, Snapshot
@@ -145,6 +146,60 @@ class SnapshotService:
     def list_snapshots(self, root_part_number: str | None = None) -> ServiceResult:
         snapshots = self.snapshot_repo.list_snapshots(root_part_number=root_part_number)
         return ok_result({"snapshots": [snapshot_to_record(item) for item in snapshots]})
+
+    @service_guard
+    def update_snapshot(
+        self,
+        snapshot_id: str,
+        label: str | None = None,
+        created_at: str | None = None,
+    ) -> ServiceResult:
+        """Edit a version's metadata (label and/or date). Content is never changed.
+
+        Pass label to set it ("" clears it); pass created_at (ISO-8601, Z-tolerant) to
+        re-date the version. Omitted fields are left as-is.
+        """
+        snapshot_id = (snapshot_id or "").strip()
+        if not snapshot_id:
+            return err_result("snapshot_id is required")
+
+        snapshot = self.snapshot_repo.get(snapshot_id)
+        if snapshot is None:
+            return err_result(f"Snapshot '{snapshot_id}' not found")
+
+        new_label = snapshot.label
+        if label is not None:
+            new_label = label.strip() or None
+
+        new_created_at = snapshot.created_at
+        if created_at is not None:
+            text = created_at.strip()
+            try:
+                datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except ValueError:
+                return err_result(f"created_at '{created_at}' is not a valid ISO-8601 timestamp")
+            new_created_at = text
+
+        updated = Snapshot(
+            snapshot_id=snapshot.snapshot_id,
+            root_part_number=snapshot.root_part_number,
+            created_at=new_created_at,
+            signature=snapshot.signature,
+            parts=snapshot.parts,
+            relationships=snapshot.relationships,
+            label=new_label,
+        )
+        self.snapshot_repo.replace(updated)
+        return ok_result({"snapshot": snapshot_to_record(updated)})
+
+    @service_guard
+    def delete_snapshot(self, snapshot_id: str) -> ServiceResult:
+        snapshot_id = (snapshot_id or "").strip()
+        if not snapshot_id:
+            return err_result("snapshot_id is required")
+        if not self.snapshot_repo.delete(snapshot_id):
+            return err_result(f"Snapshot '{snapshot_id}' not found")
+        return ok_result({"deleted": True, "snapshot_id": snapshot_id})
 
 
 class SnapshotDiffService:

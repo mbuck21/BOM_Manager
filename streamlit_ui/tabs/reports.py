@@ -47,6 +47,28 @@ def _live_snapshot_object(ctx: AppContext, root_part_number: str):
     )
 
 
+@st.cache_data(show_spinner=False, max_entries=512)
+def _cached_snapshot_rollup(
+    data_dir: str, snapshot_id: str, root_part_number: str
+) -> dict[str, Any] | None:
+    """Rollup of one saved version, cached across reruns.
+
+    Safe to cache indefinitely: a snapshot's *content* is immutable (only its label/date
+    can be edited, and neither affects weight). Keyed by data dir so projects don't mix.
+    """
+    from bom_backend import BOMBackend
+
+    backend = BOMBackend(data_dir=data_dir)
+    record_result = backend.snapshots.get_snapshot(snapshot_id)
+    if not record_result.get("ok"):
+        return None
+    snapshot_backend = _build_snapshot_backend(record_result["data"]["snapshot"])
+    result = snapshot_backend.rollups.rollup_weight_with_maturity(
+        root_part_number=root_part_number, include_root=True, top_n=9999
+    )
+    return result["data"] if result.get("ok") else None
+
+
 def render_weight_over_time(ctx: AppContext, root_part_number: str) -> None:
     """Line chart of the selected root's rollup weight across all saved versions."""
     if not root_part_number:
@@ -57,16 +79,15 @@ def render_weight_over_time(ctx: AppContext, root_part_number: str) -> None:
 
     points: list[dict[str, Any]] = []
     for record in snapshots:  # already oldest-first
-        backend = _build_snapshot_backend(record)
-        result = backend.rollups.rollup_weight_with_maturity(
-            root_part_number=root_part_number, include_root=True, top_n=1
+        rollup = _cached_snapshot_rollup(
+            str(ctx.data_dir), str(record.get("snapshot_id", "")).strip(), root_part_number
         )
-        if not result.get("ok"):
+        if rollup is None:
             continue  # root not present in this version
         points.append(
             {
                 "when": str(record.get("created_at", "")).strip(),
-                "weight": float(result["data"].get("total", 0) or 0),
+                "weight": float(rollup.get("total", 0) or 0),
                 "version": str(record.get("label") or "").strip() or "(auto-save)",
             }
         )
@@ -155,15 +176,15 @@ def render_weekly_report(ctx: AppContext, root_part_number: str) -> None:
         )
     ]
 
-    # Rollups for both sides, scoped to the current root assembly.
-    baseline_backend = _build_snapshot_backend(baseline_record)
-    baseline_rollup = baseline_backend.rollups.rollup_weight_with_maturity(
-        root_part_number=root_part_number, include_root=True, top_n=9999
+    # Rollups for both sides, scoped to the current root assembly. The baseline side is
+    # cached across reruns (snapshot content never changes).
+    baseline_rollup_data = _cached_snapshot_rollup(
+        str(ctx.data_dir), str(baseline_record.get("snapshot_id", "")).strip(), root_part_number
     )
     live_rollup = ctx.live_backend.rollups.rollup_weight_with_maturity(
         root_part_number=root_part_number, include_root=True, top_n=9999
     )
-    if not baseline_rollup.get("ok"):
+    if baseline_rollup_data is None:
         st.warning(
             f"`{root_part_number}` can't be rolled up in that baseline "
             "(it may not exist there yet). Pick another baseline or root."
@@ -191,7 +212,7 @@ def render_weekly_report(ctx: AppContext, root_part_number: str) -> None:
     root_part = part_lookup.get(root_part_number)
     report = build_weekly_report(
         baseline_snapshot=baseline_record,
-        baseline_rollup=baseline_rollup["data"],
+        baseline_rollup=baseline_rollup_data,
         live_rollup=live_rollup["data"],
         diff_data=diff_result["data"],
         part_lookup=part_lookup,

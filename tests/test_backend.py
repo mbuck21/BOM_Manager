@@ -489,6 +489,137 @@ class TestProjectStore(unittest.TestCase):
         self.assertEqual(len(document["snapshots"]), 1)
 
 
+class TestSnapshotManagement(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.backend = BOMBackend(data_dir=self.tmp.name)
+        self.backend.parts.add_or_update_part("A", "Assembly A", {"unit_weight": 5})
+        self.snap = self.backend.snapshots.create_snapshot(label="first")["data"]["snapshot"]
+        self.backend.parts.update_attributes("A", {"unit_weight": 6})
+        self.snap2 = self.backend.snapshots.create_snapshot(label="second")["data"]["snapshot"]
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_update_label_only(self) -> None:
+        result = self.backend.snapshots.update_snapshot(self.snap["snapshot_id"], label="renamed")
+        self.assertTrue(result["ok"])
+        updated = result["data"]["snapshot"]
+        self.assertEqual(updated["label"], "renamed")
+        # Metadata-only: content, signature, and date untouched.
+        self.assertEqual(updated["signature"], self.snap["signature"])
+        self.assertEqual(updated["created_at"], self.snap["created_at"])
+        self.assertEqual(len(updated["parts"]), len(self.snap["parts"]))
+
+    def test_update_date_resorts_history(self) -> None:
+        # Move the first version after the second — list order must follow.
+        result = self.backend.snapshots.update_snapshot(
+            self.snap["snapshot_id"], created_at="2099-01-01T00:00:00Z"
+        )
+        self.assertTrue(result["ok"])
+        ordered = self.backend.snapshots.list_snapshots()["data"]["snapshots"]
+        self.assertEqual(ordered[-1]["snapshot_id"], self.snap["snapshot_id"])
+
+    def test_update_rejects_bad_date_and_unknown_id(self) -> None:
+        bad = self.backend.snapshots.update_snapshot(self.snap["snapshot_id"], created_at="not-a-date")
+        self.assertFalse(bad["ok"])
+        missing = self.backend.snapshots.update_snapshot("nope", label="x")
+        self.assertFalse(missing["ok"])
+
+    def test_clear_label_with_empty_string(self) -> None:
+        result = self.backend.snapshots.update_snapshot(self.snap["snapshot_id"], label="")
+        self.assertTrue(result["ok"])
+        self.assertIsNone(result["data"]["snapshot"]["label"])
+
+    def test_delete_snapshot(self) -> None:
+        result = self.backend.snapshots.delete_snapshot(self.snap["snapshot_id"])
+        self.assertTrue(result["ok"])
+        remaining = self.backend.snapshots.list_snapshots()["data"]["snapshots"]
+        self.assertEqual([s["snapshot_id"] for s in remaining], [self.snap2["snapshot_id"]])
+        # Deleting again fails cleanly.
+        self.assertFalse(self.backend.snapshots.delete_snapshot(self.snap["snapshot_id"])["ok"])
+
+
+class TestReadEfficiency(unittest.TestCase):
+    """Traversals must index the project once, not hit the store per BOM node.
+
+    Regression guard for the unresponsiveness bug where one rollup re-read the data
+    file ~400 times (once per node) and took seconds on a real project.
+    """
+
+    def test_traversals_read_document_a_bounded_number_of_times(self) -> None:
+        from unittest.mock import patch
+
+        from bom_backend.store import ProjectStore
+
+        tmp = tempfile.TemporaryDirectory()
+        try:
+            backend = BOMBackend(data_dir=tmp.name)
+            for i in range(30):
+                backend.parts.add_or_update_part(f"P{i}", f"Part {i}", {"unit_weight": 1.0})
+            for i in range(29):
+                backend.bom.add_or_update_relationship(f"P{i}", f"P{i+1}", qty=1, rel_id=f"R{i}")
+
+            counter = {"n": 0}
+            original = ProjectStore._read_document
+
+            def counting(self):
+                counter["n"] += 1
+                return original(self)
+
+            with patch.object(ProjectStore, "_read_document", counting):
+                counter["n"] = 0
+                result = backend.rollups.rollup_weight_with_maturity("P0", include_root=True)
+                self.assertTrue(result["ok"])
+                self.assertLess(counter["n"], 10, "rollup must not read the store per node")
+
+                counter["n"] = 0
+                result = backend.bom.get_subgraph("P0")
+                self.assertTrue(result["ok"])
+                self.assertLess(counter["n"], 10, "get_subgraph must not read the store per node")
+        finally:
+            tmp.cleanup()
+
+
+class TestDocumentCache(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / PROJECT_FILENAME
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_write_visible_to_fresh_instance(self) -> None:
+        store = ProjectStore(self.path)
+        store.write_section("parts", [{"part_number": "A"}])
+        fresh = ProjectStore(self.path)
+        self.assertEqual(fresh.read_section("parts"), [{"part_number": "A"}])
+
+    def test_external_file_change_invalidates_cache(self) -> None:
+        import os
+
+        store = ProjectStore(self.path)
+        store.write_section("parts", [{"part_number": "A"}])
+        self.assertEqual(store.read_section("parts"), [{"part_number": "A"}])
+
+        # Rewrite the file behind the store's back (different mtime/size).
+        self.path.write_text(
+            json.dumps(
+                {"version": 2, "parts": [{"part_number": "B"}], "relationships": [], "snapshots": []}
+            )
+        )
+        os.utime(self.path, ns=(1, 1))  # force a distinct stat signature
+        self.assertEqual(store.read_section("parts"), [{"part_number": "B"}])
+
+    def test_cached_reads_do_not_alias_section_lists(self) -> None:
+        store = ProjectStore(self.path)
+        store.write_section("parts", [{"part_number": "A"}])
+        first = store.read_section("parts")
+        first.append({"part_number": "MUTATED"})
+        first[0]["part_number"] = "MUTATED"
+        self.assertEqual(store.read_section("parts"), [{"part_number": "A"}])
+
+
 class TestLegacyMigration(unittest.TestCase):
     def test_migrates_legacy_files_into_one_file(self) -> None:
         tmp = tempfile.TemporaryDirectory()

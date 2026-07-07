@@ -26,6 +26,22 @@ def _empty_document() -> dict[str, Any]:
     }
 
 
+# Parsed-document cache shared across ProjectStore instances (each Streamlit rerun
+# builds a fresh backend, and services read the file many times per rerun). An entry is
+# valid while the file's stat signature (mtime_ns, size) is unchanged; writes refresh it.
+# Cached records are shared between reads, so callers must never mutate returned records
+# in place — all write paths construct new records via serialization.py.
+_DOCUMENT_CACHE: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
+
+
+def _stat_signature(path: Path) -> tuple[int, int] | None:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return (stat.st_mtime_ns, stat.st_size)
+
+
 class ProjectStore:
     """Single-file JSON store holding parts, relationships, and snapshot history.
 
@@ -55,21 +71,39 @@ class ProjectStore:
             return self._batch_doc
 
         self._ensure_file()
-        with self.path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
+        cache_key = str(self.path.resolve())
+        signature = _stat_signature(self.path)
+        cached = _DOCUMENT_CACHE.get(cache_key)
 
-        document = _empty_document()
-        if isinstance(payload, dict):
-            if isinstance(payload.get("version"), int):
-                document["version"] = payload["version"]
-            for section in SECTIONS:
-                items = payload.get(section)
-                if isinstance(items, list):
-                    document[section] = [dict(item) for item in items]
-            settings = payload.get(SETTINGS_KEY)
-            if isinstance(settings, dict):
-                document[SETTINGS_KEY] = dict(settings)
-        return document
+        if cached is not None and signature is not None and cached[0] == signature:
+            document = cached[1]
+        else:
+            with self.path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+
+            document = _empty_document()
+            if isinstance(payload, dict):
+                if isinstance(payload.get("version"), int):
+                    document["version"] = payload["version"]
+                for section in SECTIONS:
+                    items = payload.get(section)
+                    if isinstance(items, list):
+                        document[section] = [dict(item) for item in items]
+                settings = payload.get(SETTINGS_KEY)
+                if isinstance(settings, dict):
+                    document[SETTINGS_KEY] = dict(settings)
+            if signature is not None:
+                _DOCUMENT_CACHE[cache_key] = (signature, document)
+
+        # Fresh top-level containers so callers can replace sections without
+        # corrupting the cached document.
+        fresh: dict[str, Any] = {
+            "version": document.get("version", CURRENT_VERSION),
+            SETTINGS_KEY: dict(document.get(SETTINGS_KEY, {})),
+        }
+        for section in SECTIONS:
+            fresh[section] = list(document.get(section, []))
+        return fresh
 
     def _write_document(self, document: dict[str, Any]) -> None:
         tmp = self.path.with_suffix(".tmp")
@@ -77,6 +111,10 @@ class ProjectStore:
             json.dump(document, handle, indent=2, sort_keys=True, ensure_ascii=True)
             handle.write("\n")
         tmp.replace(self.path)
+
+        signature = _stat_signature(self.path)
+        if signature is not None:
+            _DOCUMENT_CACHE[str(self.path.resolve())] = (signature, document)
 
     # ── section access ────────────────────────────────────────────────────────
     def read_section(self, name: str) -> list[dict[str, Any]]:

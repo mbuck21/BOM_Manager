@@ -256,6 +256,49 @@ def part_history(snapshots: list[dict[str, Any]], part_number: str) -> list[dict
     return events
 
 
+def plan_version_edits(
+    baseline_rows: list[dict[str, Any]],
+    edited_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Diff the Manage-versions grid back into updates and deletes.
+
+    Rows are keyed by snapshot_id: a missing row is a delete, a changed label or
+    created_at is an update, and added rows (no known id) are ignored. Returns
+    {"updates": [{"snapshot_id", "label", "created_at"}], "deletes": [ids]}.
+    """
+    baseline_by_id = {
+        str(row.get("snapshot_id") or "").strip(): row
+        for row in baseline_rows
+        if str(row.get("snapshot_id") or "").strip()
+    }
+    seen: set[str] = set()
+    updates: list[dict[str, str]] = []
+
+    for row in edited_rows:
+        snapshot_id = str(row.get("snapshot_id") or "").strip()
+        if not snapshot_id or snapshot_id not in baseline_by_id:
+            continue
+        seen.add(snapshot_id)
+        base = baseline_by_id[snapshot_id]
+
+        label = str(row.get("label") or "").strip()
+        base_label = str(base.get("label") or "").strip()
+        created_at = str(row.get("created_at") or "").strip()
+        base_created_at = str(base.get("created_at") or "").strip()
+
+        if label != base_label or (created_at and created_at != base_created_at):
+            updates.append(
+                {
+                    "snapshot_id": snapshot_id,
+                    "label": label,
+                    "created_at": created_at or base_created_at,
+                }
+            )
+
+    deletes = [snapshot_id for snapshot_id in baseline_by_id if snapshot_id not in seen]
+    return {"updates": updates, "deletes": deletes}
+
+
 def stale_parts(
     parts: list[dict[str, Any]],
     now_iso: str,

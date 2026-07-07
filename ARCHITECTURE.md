@@ -32,7 +32,7 @@ unit-testable without a browser or app session.
 |---|---|
 | `backend.py` | `BOMBackend(data_dir)` composition root: runs migration, opens the `ProjectStore`, wires repositories + services |
 | `models.py` | Dataclasses: `Part`, `Relationship` (parent→child edge carrying qty), `Snapshot` (frozen version) |
-| `store.py` | `ProjectStore` — the single-file JSON store. Atomic writes (`.tmp` + rename); `read_section`/`write_section` for parts/relationships/snapshots; `read_settings`/`write_settings` for the settings dict; `batch()` groups many writes into one atomic file write |
+| `store.py` | `ProjectStore` — the single-file JSON store. Atomic writes (`.tmp` + rename); `read_section`/`write_section` for parts/relationships/snapshots; `read_settings`/`write_settings` for the settings dict; `batch()` groups many writes into one atomic file write; an mtime-keyed parse cache avoids re-reading the file on every repository call (records are shared — never mutate them in place) |
 | `repositories.py` | `PartRepository`, `RelationshipRepository`, `SnapshotRepository` — typed CRUD over the store's sections |
 | `serialization.py` | Record ↔ dataclass converters (the on-disk shapes) |
 | `migration.py` | Folds the legacy multi-file layout (`parts.json` + `relationships.json` + `snapshots/`) into `project.bom.json`, non-destructively, on first open |
@@ -41,7 +41,7 @@ unit-testable without a browser or app session.
 | `services/part_catalog.py` | Part CRUD; `delete_part(cascade=True)` removes the part's BOM links with it |
 | `services/bom_structure.py` | Relationship CRUD with qty validation and DFS **cycle prevention**; `get_children`/`get_parents`/`get_subgraph` |
 | `services/rollups.py` | The weight engine: `rollup_weight_with_maturity` (BFS; per-path `breakdown`, per-part `part_totals`, `unresolved_nodes`) and `subtree_weight_map` (one-pass weight of every part) |
-| `services/snapshot_diff.py` | `SnapshotService` (create/list versions; whole-project when root is empty; **dedup by content signature**) and `SnapshotDiffService` (`compare_snapshots` / `compare_snapshot_objects`) |
+| `services/snapshot_diff.py` | `SnapshotService` (create/list versions; whole-project when root is empty; **dedup by content signature**; `update_snapshot` edits label/date metadata only; `delete_snapshot` prunes history) and `SnapshotDiffService` (`compare_snapshots` / `compare_snapshot_objects`) |
 | `utils/` | `canonical.py` (deterministic snapshot signature), `parsing.py` (`base_number` — drawing family of a part number), `clock.py`, `sorting.py` |
 
 ### `streamlit_ui/` — the GUI layer

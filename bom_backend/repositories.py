@@ -140,6 +140,28 @@ class SnapshotRepository:
     def get(self, snapshot_id: str) -> Snapshot | None:
         return {item.snapshot_id: item for item in self._read_snapshots()}.get(snapshot_id)
 
+    def delete(self, snapshot_id: str) -> bool:
+        snapshots = self._read_snapshots()
+        kept = [item for item in snapshots if item.snapshot_id != snapshot_id]
+        deleted = len(kept) != len(snapshots)
+        if deleted:
+            self._store.write_section(
+                "snapshots", [snapshot_to_record(item) for item in kept]
+            )
+        return deleted
+
+    def replace(self, snapshot: Snapshot) -> Snapshot:
+        """Overwrite an existing snapshot record (used for metadata edits)."""
+        snapshots = [
+            snapshot if item.snapshot_id == snapshot.snapshot_id else item
+            for item in self._read_snapshots()
+        ]
+        snapshots.sort(key=lambda item: (item.created_at, item.snapshot_id))
+        self._store.write_section(
+            "snapshots", [snapshot_to_record(item) for item in snapshots]
+        )
+        return snapshot
+
     def list_snapshots(self, root_part_number: str | None = None) -> list[Snapshot]:
         snapshots = self._read_snapshots()
         if root_part_number:

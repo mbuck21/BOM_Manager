@@ -9,6 +9,7 @@ from streamlit_ui.report import (
     build_weekly_report,
     default_baseline_index,
     part_history,
+    plan_version_edits,
     report_to_text,
     stale_parts,
 )
@@ -435,6 +436,41 @@ class TestPartHistory(unittest.TestCase):
         self.assertIn("unit_weight: 10 -> 12", changes)
         self.assertIn("category set to structural", changes)
         self.assertEqual(changes[-1], "first appears")
+
+
+class TestPlanVersionEdits(unittest.TestCase):
+    BASELINE = [
+        {"snapshot_id": "s1", "created_at": "2026-06-01T00:00:00Z", "label": "first"},
+        {"snapshot_id": "s2", "created_at": "2026-06-08T00:00:00Z", "label": ""},
+    ]
+
+    def test_no_change(self) -> None:
+        plan = plan_version_edits(self.BASELINE, [dict(r) for r in self.BASELINE])
+        self.assertEqual(plan, {"updates": [], "deletes": []})
+
+    def test_label_and_date_edits(self) -> None:
+        edited = [dict(r) for r in self.BASELINE]
+        edited[0]["label"] = "renamed"
+        edited[1]["created_at"] = "2026-06-09T12:00:00Z"
+        plan = plan_version_edits(self.BASELINE, edited)
+        self.assertEqual(len(plan["updates"]), 2)
+        by_id = {u["snapshot_id"]: u for u in plan["updates"]}
+        self.assertEqual(by_id["s1"]["label"], "renamed")
+        self.assertEqual(by_id["s2"]["created_at"], "2026-06-09T12:00:00Z")
+        self.assertEqual(plan["deletes"], [])
+
+    def test_deleted_row_and_ignored_added_row(self) -> None:
+        edited = [dict(self.BASELINE[0]), {"snapshot_id": "", "label": "new", "created_at": ""}]
+        plan = plan_version_edits(self.BASELINE, edited)
+        self.assertEqual(plan["deletes"], ["s2"])
+        self.assertEqual(plan["updates"], [])
+
+    def test_blank_date_keeps_original(self) -> None:
+        edited = [dict(r) for r in self.BASELINE]
+        edited[0]["created_at"] = ""
+        edited[0]["label"] = "renamed"
+        plan = plan_version_edits(self.BASELINE, edited)
+        self.assertEqual(plan["updates"][0]["created_at"], "2026-06-01T00:00:00Z")
 
 
 class TestStaleParts(unittest.TestCase):

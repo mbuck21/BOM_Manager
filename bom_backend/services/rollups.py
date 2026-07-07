@@ -4,6 +4,7 @@ from collections import deque
 from typing import Any
 
 from bom_backend.constants import MATURITY_FACTOR_KEY, UNIT_WEIGHT_KEY
+from bom_backend.models import Relationship
 from bom_backend.repositories import PartRepository, RelationshipRepository
 from bom_backend.result import ServiceResult, err_result, ok_result, service_guard
 
@@ -102,6 +103,14 @@ class RollupService:
         if normalized_default_maturity <= 0:
             return err_result("default_maturity_factor must be > 0")
 
+        # Index the whole project once. Per-node repository calls (get/find_children)
+        # would re-read the data file for every BOM node — hundreds of parses per
+        # rollup on a real project. See the performance invariant in CLAUDE.md.
+        parts_by_number = {part.part_number: part for part in self.part_repo.list_parts()}
+        children_by_parent: dict[str, list[Relationship]] = {}
+        for relationship in self.relationship_repo.list_relationships():
+            children_by_parent.setdefault(relationship.parent_part_number, []).append(relationship)
+
         queue: deque[tuple[str, float, list[str]]] = deque()
         queue.append((root_part_number, 1.0, [root_part_number]))
 
@@ -136,8 +145,8 @@ class RollupService:
             part_number, quantity_multiplier, path = queue.popleft()
             is_root = len(path) == 1
 
-            part = self.part_repo.get(part_number)
-            children = self.relationship_repo.find_children(part_number)
+            part = parts_by_number.get(part_number)
+            children = children_by_parent.get(part_number, [])
 
             if part is None:
                 add_warning(f"Part '{part_number}' is missing from catalog")

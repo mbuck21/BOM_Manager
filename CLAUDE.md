@@ -76,6 +76,18 @@ Data. Session-state keys live in `streamlit_ui/state.py`.
    `weight_budget` are known to code (`bom_backend/constants.py`). Categories/weight
    bases/zones are user-defined columns stored in `settings["columns"]` with type
    text/number/choice; the group-by and coverage views consume them generically.
+7. **Performance: never call repository lookups per BOM node.** Streamlit reruns the
+   whole script on every click, and each repository read parses the project file. A
+   traversal that calls `part_repo.get`/`find_children` per node once took 4+ seconds
+   (418 file parses); the fix is to `list_parts()`/`list_relationships()` ONCE and index
+   into dicts (see `rollup_weight_with_maturity`, `get_subgraph`, `subtree_weight_map`).
+   `ProjectStore` also keeps an mtime-keyed parse cache (`_DOCUMENT_CACHE` in `store.py`)
+   — cached records are shared, so never mutate records returned by a repository in
+   place. `tests/test_backend.py::TestReadEfficiency` guards this.
+8. **Snapshot edits are metadata-only.** `update_snapshot` may change label/created_at
+   but never content or signature; `delete_snapshot` prunes history. Neither creates an
+   auto-version. Per-snapshot rollups in the UI are `st.cache_data`-cached keyed by
+   snapshot_id (safe: content is immutable).
 
 ## Streamlit gotchas learned the hard way
 
