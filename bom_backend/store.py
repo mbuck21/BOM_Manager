@@ -9,13 +9,21 @@ from typing import Any, Iterator
 #   - "parts":         the current parts catalog
 #   - "relationships": the current parent -> child BOM edges
 #   - "snapshots":     the saved version history (each a frozen copy)
+#   - "settings":      project preferences (e.g. user-defined column types/choices)
 SECTIONS = ("parts", "relationships", "snapshots")
+SETTINGS_KEY = "settings"
 CURRENT_VERSION = 2
 PROJECT_FILENAME = "project.bom.json"
 
 
 def _empty_document() -> dict[str, Any]:
-    return {"version": CURRENT_VERSION, "parts": [], "relationships": [], "snapshots": []}
+    return {
+        "version": CURRENT_VERSION,
+        "parts": [],
+        "relationships": [],
+        "snapshots": [],
+        SETTINGS_KEY: {},
+    }
 
 
 class ProjectStore:
@@ -58,6 +66,9 @@ class ProjectStore:
                 items = payload.get(section)
                 if isinstance(items, list):
                     document[section] = [dict(item) for item in items]
+            settings = payload.get(SETTINGS_KEY)
+            if isinstance(settings, dict):
+                document[SETTINGS_KEY] = dict(settings)
         return document
 
     def _write_document(self, document: dict[str, Any]) -> None:
@@ -78,6 +89,20 @@ class ProjectStore:
             raise ValueError(f"Unknown section '{name}'")
         document = self._read_document()
         document[name] = [dict(item) for item in records]
+
+        if self._batch_depth > 0:
+            self._batch_doc = document
+        else:
+            self._write_document(document)
+
+    # ── settings (dict section) ───────────────────────────────────────────────
+    def read_settings(self) -> dict[str, Any]:
+        settings = self._read_document().get(SETTINGS_KEY, {})
+        return dict(settings) if isinstance(settings, dict) else {}
+
+    def write_settings(self, settings: dict[str, Any]) -> None:
+        document = self._read_document()
+        document[SETTINGS_KEY] = dict(settings)
 
         if self._batch_depth > 0:
             self._batch_doc = document

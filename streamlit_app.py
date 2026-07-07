@@ -12,10 +12,10 @@ from streamlit_ui.context import AppContext, build_app_context
 from streamlit_ui.helpers import resolve_data_dir, show_service_result
 from streamlit_ui.tabs import (
     render_analysis_tab,
-    render_dashboard_tab,
     render_edit_tab,
-    render_weight_analysis_tab,
+    render_weight_tab,
 )
+from streamlit_ui.tabs.reports import render_part_history, render_weekly_report
 
 LIVE_DATA_OPTION = "__live_data__"
 DATA_DIR_KEY = "data_dir"
@@ -36,61 +36,6 @@ def _part_label(part_number: str, part_lookup: dict[str, dict[str, Any]]) -> str
     if part_name:
         return f"{part_number}  |  {part_name}"
     return part_number
-
-
-def _compute_subtree_weights(
-    part_numbers: list[str],
-    part_lookup: dict[str, dict[str, Any]],
-    relationships: list[dict[str, Any]],
-) -> dict[str, float]:
-    """Compute effective subtree weight for each part, matching rollup_weight_with_maturity logic."""
-    children_qty: dict[str, list[tuple[str, float]]] = defaultdict(list)
-    for rel in relationships:
-        parent = str(rel.get("parent_part_number", "")).strip()
-        child = str(rel.get("child_part_number", "")).strip()
-        if not parent or not child:
-            continue
-        try:
-            qty = float(rel.get("qty", 1) or 1)
-        except (TypeError, ValueError):
-            qty = 1.0
-        children_qty[parent].append((child, qty))
-
-    def get_unit_weight(pn: str) -> float | None:
-        attrs = part_lookup.get(pn, {}).get("attributes") or {}
-        raw_uw = attrs.get("unit_weight")
-        if raw_uw is None:
-            return None
-        try:
-            uw = float(raw_uw)
-        except (TypeError, ValueError):
-            return None
-        try:
-            mf = float(attrs.get("maturity_factor") or 1.0)
-        except (TypeError, ValueError):
-            mf = 1.0
-        return uw * (mf if mf > 0 else 1.0)
-
-    memo: dict[str, float] = {}
-
-    def dfs(pn: str, visiting: set[str]) -> float:
-        if pn in memo:
-            return memo[pn]
-        if pn in visiting:
-            return 0.0
-        visiting.add(pn)
-        uw = get_unit_weight(pn)
-        if uw is not None:
-            result = uw
-        else:
-            result = sum(qty * dfs(child, visiting) for child, qty in children_qty.get(pn, []))
-        visiting.discard(pn)
-        memo[pn] = result
-        return result
-
-    for pn in part_numbers:
-        dfs(pn, set())
-    return memo
 
 
 def _root_candidates(
@@ -148,7 +93,7 @@ def _render_directory_node(
     active_root: str = "",
     weight_map: dict[str, float] | None = None,
     depth: int = 0,
-    max_depth: int = 12,
+    max_depth: int = 4,
 ) -> None:
     label = _part_label(part_number, part_lookup)
     is_active = part_number == active_root
@@ -190,7 +135,7 @@ def _render_directory_node(
     elif container.button(display_label, key=f"root_leaf_pick_{node_key}"):
         _set_universal_root(part_number)
     if depth >= max_depth and children:
-        container.caption("Depth limit reached for this branch.")
+        container.caption("Deeper levels hidden — click 'Use as root' to drill in.")
 
 
 def render_root_sidebar(ctx: AppContext) -> str:
@@ -213,7 +158,8 @@ def render_root_sidebar(ctx: AppContext) -> str:
         active_root = available_roots[0]
         st.session_state[UNIVERSAL_ROOT_PART_KEY] = active_root
 
-    weight_map = _compute_subtree_weights(part_numbers, part_lookup, ctx.relationships)
+    weight_result = ctx.backend.rollups.subtree_weight_map()
+    weight_map = weight_result["data"]["weights"] if weight_result.get("ok") else {}
     available_roots = sorted(available_roots, key=lambda pn: (-weight_map.get(pn, 0), pn))
 
     active_label = _part_label(active_root, part_lookup)
@@ -379,7 +325,16 @@ def render_history_tab(ctx: AppContext) -> None:
     render_snapshot_selector(ctx)
 
     st.divider()
-    render_analysis_tab(ctx, root_part_number=st.session_state.get(UNIVERSAL_ROOT_PART_KEY, ""))
+    universal_root = st.session_state.get(UNIVERSAL_ROOT_PART_KEY, "")
+    sub_report, sub_compare, sub_part = st.tabs(
+        ["Weekly report", "Compare versions", "Part history"]
+    )
+    with sub_report:
+        render_weekly_report(ctx, universal_root)
+    with sub_compare:
+        render_analysis_tab(ctx, root_part_number=universal_root)
+    with sub_part:
+        render_part_history(ctx)
 
 
 def main() -> None:
@@ -393,7 +348,7 @@ def main() -> None:
             padding-right: 2rem;
         }
         [data-testid="stSidebar"] {
-            min-width: 550px;
+            min-width: 420px;
         }
         </style>
         """,
@@ -417,10 +372,11 @@ def main() -> None:
 
     selection_initialized = bool(st.session_state.get(SNAPSHOT_SELECTION_INITIALIZED_KEY, False))
     selected_snapshot_id = st.session_state.get(ACTIVE_SNAPSHOT_ID_KEY)
+    # Always open on live (editable) data; saved versions are opt-in via the History tab.
     ctx = build_app_context(
         data_dir,
         selected_snapshot_id=selected_snapshot_id,
-        default_to_latest=not selection_initialized,
+        default_to_latest=False,
     )
 
     if not selection_initialized:
@@ -443,11 +399,9 @@ def main() -> None:
         render_edit_tab(ctx, root_part_number=universal_root)
 
     with tab_weight:
-        render_dashboard_tab(
+        render_weight_tab(
             ctx, root_part_number=universal_root, root_state_key=UNIVERSAL_ROOT_PART_KEY
         )
-        st.divider()
-        render_weight_analysis_tab(ctx, root_part_number=universal_root)
 
     with tab_history:
         render_history_tab(ctx)

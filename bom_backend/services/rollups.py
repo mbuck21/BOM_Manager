@@ -14,6 +14,65 @@ class RollupService:
         self.relationship_repo = relationship_repo
 
     @service_guard
+    def subtree_weight_map(self, default_maturity_factor: float = 1.0) -> ServiceResult:
+        """Effective subtree weight for every part in one pass.
+
+        Same semantics as rollup_weight_with_maturity: a part with unit_weight
+        contributes unit_weight * maturity_factor and its children are not traversed;
+        parts without unit_weight sum qty * child subtree weight; cycles contribute 0.
+        """
+        parts = self.part_repo.list_parts()
+        relationships = self.relationship_repo.list_relationships()
+
+        children_qty: dict[str, list[tuple[str, float]]] = {}
+        for relationship in relationships:
+            children_qty.setdefault(relationship.parent_part_number, []).append(
+                (relationship.child_part_number, relationship.qty)
+            )
+
+        attributes_by_part = {part.part_number: part.attributes for part in parts}
+
+        def effective_unit_weight(part_number: str) -> float | None:
+            attributes = attributes_by_part.get(part_number) or {}
+            raw_unit_weight = attributes.get(UNIT_WEIGHT_KEY)
+            if raw_unit_weight is None:
+                return None
+            try:
+                unit_weight = float(raw_unit_weight)
+            except (TypeError, ValueError):
+                return None
+            try:
+                maturity = float(attributes.get(MATURITY_FACTOR_KEY) or default_maturity_factor)
+            except (TypeError, ValueError):
+                maturity = default_maturity_factor
+            return unit_weight * (maturity if maturity > 0 else default_maturity_factor)
+
+        memo: dict[str, float] = {}
+
+        def dfs(part_number: str, visiting: set[str]) -> float:
+            if part_number in memo:
+                return memo[part_number]
+            if part_number in visiting:
+                return 0.0
+            visiting.add(part_number)
+            override = effective_unit_weight(part_number)
+            if override is not None:
+                weight = override
+            else:
+                weight = sum(
+                    qty * dfs(child, visiting)
+                    for child, qty in children_qty.get(part_number, [])
+                )
+            visiting.discard(part_number)
+            memo[part_number] = weight
+            return weight
+
+        for part in parts:
+            dfs(part.part_number, set())
+
+        return ok_result({"weights": memo})
+
+    @service_guard
     def rollup_numeric_attribute(
         self,
         root_part_number: str,

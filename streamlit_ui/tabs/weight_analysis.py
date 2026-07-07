@@ -4,49 +4,46 @@ from typing import Any
 
 import streamlit as st
 
-from bom_backend.constants import MATURITY_FACTOR_KEY, UNIT_WEIGHT_KEY
-from streamlit_ui.context import AppContext
+from bom_backend.constants import UNIT_WEIGHT_KEY
 
 
 def _build_opportunity_table(
     part_totals: list[dict[str, Any]],
     total_weight: float,
-    part_lookup: dict[str, Any],
+    part_lookup: dict[str, dict[str, Any]],
     exclude_non_optimizable: bool,
-    unit_weight_key: str,
 ) -> list[dict[str, Any]]:
     """Build the optimization opportunity table rows.
 
-    Savings are based on reducing the part's *unit_weight* attribute.
-    Because contribution = unit_weight * maturity_factor * total_qty,
-    a X% reduction in unit_weight yields an assembly savings of
-    total_contribution * X%.
+    Savings are based on reducing the part's *unit_weight* attribute. Because
+    contribution = unit_weight * maturity_factor * total_qty, an X% reduction in
+    unit_weight yields an assembly savings of total_contribution * X%.
     """
     rows: list[dict[str, Any]] = []
     for item in part_totals:
         pn = item["part_number"]
-        part = part_lookup.get(pn)
-        name = part.name if part else pn
+        part = part_lookup.get(pn) or {}
+        attributes = part.get("attributes") or {}
+        name = part.get("name", pn)
         can_optimize = True
+        raw = attributes.get("can_weight_optimized")
+        if raw is not None:
+            can_optimize = bool(raw)
         unit_weight = None
-        if part:
-            raw = part.attributes.get("can_weight_optimized")
-            if raw is not None:
-                can_optimize = bool(raw)
-            raw_uw = part.attributes.get(unit_weight_key)
-            if raw_uw is not None:
-                try:
-                    unit_weight = float(raw_uw)
-                except (TypeError, ValueError):
-                    pass
+        raw_uw = attributes.get(UNIT_WEIGHT_KEY)
+        if raw_uw is not None:
+            try:
+                unit_weight = float(raw_uw)
+            except (TypeError, ValueError):
+                pass
 
         if exclude_non_optimizable and not can_optimize:
             continue
 
         contribution = float(item.get("total_contribution", 0.0))
         pct = (contribution / total_weight * 100) if total_weight else 0.0
-        # Total qty in assembly = contribution / effective_unit_weight.
-        # This shows the leverage: how many times this part's weight counts.
+        # Total qty in assembly = contribution / unit_weight — the leverage: how many
+        # times this part's weight counts.
         total_qty = round(contribution / unit_weight, 2) if unit_weight else None
         rows.append(
             {
@@ -66,112 +63,61 @@ def _build_opportunity_table(
 
 
 def _breakdown_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    formatted: list[dict[str, Any]] = []
-    for item in rows:
-        formatted.append(
-            {
-                "Part Number": item["part_number"],
-                "Path": " -> ".join(item.get("path", [])),
-                "Multiplier": item["multiplier"],
-                "Unit Weight": item["unit_weight"],
-                "Maturity Factor": item["maturity_factor"],
-                "Effective Weight": item["effective_unit_weight"],
-                "Contribution": item["contribution"],
-            }
-        )
-    return formatted
+    return [
+        {
+            "Part Number": item["part_number"],
+            "Path": " -> ".join(item.get("path", [])),
+            "Multiplier": item["multiplier"],
+            "Unit Weight": item["unit_weight"],
+            "Maturity Factor": item["maturity_factor"],
+            "Effective Weight": item["effective_unit_weight"],
+            "Contribution": item["contribution"],
+        }
+        for item in rows
+    ]
 
 
-def render_weight_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
-    if ctx.snapshot_mode:
-        st.info("Snapshot mode is active. Weight analysis is running against the loaded snapshot data.")
-
-    selected_root = root_part_number.strip()
-    st.subheader("Weight Optimization Opportunities")
+def render_reduction(
+    rollup_data: dict[str, Any],
+    part_lookup: dict[str, dict[str, Any]],
+) -> None:
+    """Rank parts by how much assembly weight a redesign of each could save."""
     st.caption(
-        "Identifies which parts deliver the most assembly-level weight savings. "
-        "Parts are ranked by their total contribution to the top-level assembly weight."
+        "Parts ranked by their total contribution to the assembly weight — the bigger the "
+        "contribution, the more a redesign of that part is worth."
     )
 
-    with st.form("weight_analysis_form"):
-        st.caption(f"Root from sidebar: **{selected_root or '(none selected)'}**")
-
-        col_left, col_right = st.columns(2)
-        with col_left:
-            exclude_non_optimizable = st.checkbox(
-                "Exclude parts marked as non-optimizable",
-                value=False,
-                help="Hide parts where can_weight_optimized = false",
-            )
-            include_root = st.checkbox("Include root part contribution", value=True)
-        with col_right:
-            top_n = st.number_input(
-                "Top contributors to show",
-                min_value=1,
-                value=15,
-                step=1,
-            )
-
-        with st.expander("Advanced settings"):
-            unit_weight_key = st.text_input("Unit weight attribute key", value=UNIT_WEIGHT_KEY)
-            maturity_factor_key = st.text_input("Maturity factor attribute key", value=MATURITY_FACTOR_KEY)
-            default_maturity_factor = st.number_input(
-                "Default maturity factor",
-                min_value=0.01,
-                value=1.0,
-                step=0.01,
-                format="%.2f",
-            )
-
-        submit = st.form_submit_button("Analyze Weight Opportunities", disabled=not selected_root)
-
-    if not submit:
-        return
-
-    result = ctx.backend.rollups.rollup_weight_with_maturity(
-        root_part_number=selected_root,
-        unit_weight_key=unit_weight_key,
-        maturity_factor_key=maturity_factor_key,
-        default_maturity_factor=default_maturity_factor,
-        include_root=include_root,
-        top_n=9999,  # get all contributors; we filter in the UI
-    )
-    if not result.get("ok"):
-        for error in result.get("errors", []):
-            st.error(error)
-        return
-
-    data = result["data"]
-    total_weight = data["total"]
-
-    # Build a lookup of all parts for name / attribute enrichment.
-    part_lookup: dict[str, Any] = {}
-    for part in ctx.backend.part_repo.list_parts():
-        part_lookup[part.part_number] = part
-
-    # --- Summary metrics ---
+    filter_col, slider_col = st.columns(2)
+    with filter_col:
+        exclude_non_optimizable = st.checkbox(
+            "Exclude parts marked as non-optimizable",
+            value=False,
+            help="Hide parts where can_weight_optimized = false",
+        )
+    total_weight = float(rollup_data.get("total", 0) or 0)
     opp_rows = _build_opportunity_table(
-        data.get("part_totals", []),
+        rollup_data.get("part_totals", []),
         total_weight,
         part_lookup,
         exclude_non_optimizable,
-        unit_weight_key,
     )
+    with slider_col:
+        top_n = st.slider(
+            "Top contributors to show",
+            min_value=1,
+            max_value=max(2, len(opp_rows)),
+            value=min(15, max(2, len(opp_rows))),
+        )
 
     optimizable_weight = sum(r["Assy Contribution"] for r in opp_rows if r["Optimizable"] == "Yes")
-    non_optimizable_weight = total_weight - optimizable_weight if not exclude_non_optimizable else (
-        total_weight - sum(r["Assy Contribution"] for r in opp_rows)
-    )
+    non_optimizable_weight = sum(r["Assy Contribution"] for r in opp_rows if r["Optimizable"] == "No")
 
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3 = st.columns(3)
     m1.metric("Assembly Weight", f"{total_weight:,.2f}")
-    m2.metric("Visible Contributors", len(opp_rows))
-    m3.metric("Optimizable Weight", f"{optimizable_weight:,.2f}")
-    m4.metric("Unresolved Nodes", len(data.get("unresolved_nodes", [])))
+    m2.metric("Optimizable Weight", f"{optimizable_weight:,.2f}")
+    m3.metric("Not Optimizable", f"{non_optimizable_weight:,.2f}")
 
-    st.divider()
-
-    # --- Bar chart: top contributors ---
+    # ── Bar chart: top contributors ───────────────────────────────────────────
     chart_rows = opp_rows[: int(top_n)]
     if chart_rows:
         import altair as alt
@@ -184,12 +130,6 @@ def render_weight_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
                 "Optimizable": [r["Optimizable"] for r in chart_rows],
             }
         )
-
-        color_scale = alt.Scale(
-            domain=["Yes", "No"],
-            range=["#2196F3", "#9E9E9E"],
-        )
-
         bar_chart = (
             alt.Chart(chart_df)
             .mark_bar(cornerRadiusEnd=4)
@@ -198,7 +138,7 @@ def render_weight_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
                 y=alt.Y("Part:N", sort="-x", title=None),
                 color=alt.Color(
                     "Optimizable:N",
-                    scale=color_scale,
+                    scale=alt.Scale(domain=["Yes", "No"], range=["#2196F3", "#9E9E9E"]),
                     legend=alt.Legend(title="Can Optimize?"),
                 ),
                 tooltip=[
@@ -209,57 +149,38 @@ def render_weight_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
             )
             .properties(height=max(len(chart_rows) * 28, 200))
         )
-        st.altair_chart(bar_chart, use_container_width=True)
+        st.altair_chart(bar_chart, width="stretch")
     else:
-        st.warning("No contributors to display.")
+        st.info("No contributors to display with current filters.")
+        return
 
-    st.divider()
-
-    # --- Opportunity table ---
+    # ── Opportunity table ─────────────────────────────────────────────────────
     st.markdown("**Optimization Opportunity Ranking**")
     st.caption(
-        "Parts sorted by assembly weight contribution. "
-        "'If UW' columns show how much assembly weight drops if that part's **unit_weight** is reduced by 5%, 10%, or 20%. "
-        "Total Qty reflects how many times the part's unit weight counts in the assembly (qty x maturity)."
+        "'If UW' columns show how much assembly weight drops if that part's unit weight is "
+        "reduced by 5%, 10%, or 20%. Total Qty shows how many times the part's weight counts."
     )
-    if opp_rows:
-        import pandas as pd
+    import pandas as pd
 
-        opp_df = pd.DataFrame(opp_rows)
-        st.dataframe(
-            opp_df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "% of Assembly": st.column_config.ProgressColumn(
-                    "% of Assembly",
-                    format="%.1f%%",
-                    min_value=0,
-                    max_value=100,
-                ),
-                "Unit Weight": st.column_config.NumberColumn(format="%.3f"),
-                "Assy Contribution": st.column_config.NumberColumn(format="%.3f"),
-                "If UW -5%": st.column_config.NumberColumn(format="%.3f"),
-                "If UW -10%": st.column_config.NumberColumn(format="%.3f"),
-                "If UW -20%": st.column_config.NumberColumn(format="%.3f"),
-            },
-        )
-    else:
-        st.info("No parts to display with current filters.")
+    st.dataframe(
+        pd.DataFrame(opp_rows),
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "% of Assembly": st.column_config.ProgressColumn(
+                "% of Assembly", format="%.1f%%", min_value=0, max_value=100
+            ),
+            "Unit Weight": st.column_config.NumberColumn(format="%.3f"),
+            "Assy Contribution": st.column_config.NumberColumn(format="%.3f"),
+            "If UW -5%": st.column_config.NumberColumn(format="%.3f"),
+            "If UW -10%": st.column_config.NumberColumn(format="%.3f"),
+            "If UW -20%": st.column_config.NumberColumn(format="%.3f"),
+        },
+    )
 
-    # --- Detailed breakdown in expander ---
     with st.expander("Path Breakdown (all nodes)"):
-        bd = _breakdown_rows(data.get("breakdown", []))
+        bd = _breakdown_rows(rollup_data.get("breakdown", []))
         if bd:
-            st.dataframe(bd, use_container_width=True, hide_index=True)
+            st.dataframe(bd, width="stretch", hide_index=True)
         else:
             st.info("No breakdown data.")
-
-    warnings = result.get("warnings", [])
-    unresolved = data.get("unresolved_nodes", [])
-    if unresolved or warnings:
-        with st.expander(f"Unresolved Nodes & Warnings ({len(unresolved)} nodes, {len(warnings)} warnings)"):
-            if unresolved:
-                st.dataframe(unresolved, use_container_width=True, hide_index=True)
-            for w in warnings:
-                st.caption(f"- {w}")

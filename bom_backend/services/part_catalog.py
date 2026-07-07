@@ -77,12 +77,23 @@ class PartCatalogService:
         return ok_result({"parts": [part_to_record(part) for part in parts]})
 
     @service_guard
-    def delete_part(self, part_number: str, allow_if_referenced: bool = False) -> ServiceResult:
+    def delete_part(
+        self,
+        part_number: str,
+        allow_if_referenced: bool = False,
+        cascade: bool = False,
+    ) -> ServiceResult:
         part_number = (part_number or "").strip()
         if not part_number:
             return err_result("part_number is required")
 
-        if not allow_if_referenced:
+        removed_relationships: list[str] = []
+        if cascade:
+            for relationship in self.relationship_repo.list_relationships():
+                if part_number in (relationship.parent_part_number, relationship.child_part_number):
+                    if self.relationship_repo.delete(relationship.rel_id):
+                        removed_relationships.append(relationship.rel_id)
+        elif not allow_if_referenced:
             reference_count = self.relationship_repo.count_part_references(part_number)
             if reference_count > 0:
                 return err_result(
@@ -93,7 +104,20 @@ class PartCatalogService:
         if not deleted:
             return err_result(f"Part '{part_number}' not found")
 
-        return ok_result({"deleted": True, "part_number": part_number})
+        warnings: list[str] = []
+        if removed_relationships:
+            warnings.append(
+                f"Also removed {len(removed_relationships)} BOM link(s) referencing '{part_number}'"
+            )
+
+        return ok_result(
+            {
+                "deleted": True,
+                "part_number": part_number,
+                "removed_relationships": removed_relationships,
+            },
+            warnings=warnings,
+        )
 
     @service_guard
     def update_attributes(

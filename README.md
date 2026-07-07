@@ -1,210 +1,227 @@
-# BOM Manager Backend
+# Mass Allocation Tracking Tool (BOM Manager)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mbuck21/BOM_Manager)
 
-This project provides a file-backed BOM backend with services for:
-- part catalog CRUD
-- BOM relationship management with cycle prevention
-- subgraph traversal
-- numeric rollups
-- snapshots (version history) and snapshot diffs
+A side tool for engineers who own a **weight rollup**: keep a bill of materials with unit
+weights, edit it like a spreadsheet, and instantly see assembly weights, budget margin,
+reduction opportunities, and what changed since last week. Every save is versioned, so
+history and weekly reporting come for free.
 
-## Install and Initialize
+It is **not** a parts-data-management system — it's the fast, local scratchpad for
+understanding and reporting weight.
+
+## Get up and running
+
+1. **Install Python 3.11 or newer** — from [python.org/downloads](https://www.python.org/downloads/)
+   (on Windows, tick *"Add Python to PATH"* during install).
+2. Open a terminal in this folder and install the one dependency:
+
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+
+3. Start the app:
+
+   ```bash
+   streamlit run streamlit_app.py
+   ```
+
+   Your browser opens at `http://localhost:8501` with example data loaded.
+
+> **If something goes wrong:** if `python` isn't found, try `python3` (and `python3 -m pip`).
+> If the browser doesn't open, browse to `http://localhost:8501` yourself.
+
+## A five-minute tour
+
+**Sidebar — pick your root.** The tree on the left is your BOM, heaviest branches first.
+Click **Use as root** on any assembly to make it the focus of the Weight tab. Use the
+*Find part* box to jump to a part by number or name.
+
+**Edit tab — your spreadsheet.** Two tables:
+- **Parts** — one row per part: part number, name, **Unit Weight**, **Maturity Factor**,
+  plus any columns you define. Click a cell and type; paste whole columns from Excel; add
+  rows at the bottom; tick rows to delete them (their BOM links are removed too).
+- **BOM structure** — one row per parent→child link with its **Qty**.
+
+Nothing is written until you press **💾 Save changes** (an `● Unsaved changes` badge shows
+when you have pending edits). Each save also records a version in History automatically.
+
+Also on the Edit tab:
+- **Manage columns** — add your own columns, with your own vocabulary: e.g. a
+  `weight_basis` dropdown (measured / Creo estimate / vendor quote), a structural vs
+  non-structural `category`, `zone`, `supplier`… Dropdown columns keep entries consistent.
+- **Quick add a part** — one part + its parent link + qty + weight in one step.
+- **Bulk add parts** — paste many rows from Excel (see recipe below).
+- **Replace an assembly** — swap an old subassembly for a new one, keeping the subparts
+  you choose.
+
+**Weight & Rollup tab — the answers.** A budget bar on top (Budget / Actual / Margin),
+then four views of one rollup:
+- **Overview** — total weight, maturity growth, and the per-child breakdown chart/table.
+- **Reduction opportunities** — parts ranked by how much assembly weight a redesign could
+  save ("If unit weight −5/10/20%").
+- **Group by** — weight by **drawing family** (base part number) or by **any column you
+  added** (category, weight basis, zone…), with drill-down into each group.
+- **Data health** — most out-of-date weights, parts that can't roll up, column coverage,
+  and allocated weights that override their children.
+
+**History tab — versions and reporting.**
+- **Save version now** records a named baseline (e.g. "PDR baseline"). Auto-saves happen on
+  every Save too.
+- **Weekly report** — pick a baseline (defaults to ~a week ago) and get total delta, top
+  movers, added/removed parts, and a **copy-ready text block** for your weekly email.
+- **Compare versions** — full diff between any two versions, with weight impact.
+- **Part history** — every recorded change to one part, across all versions.
+
+**Data tab** — points the app at a data folder and shows the one file everything lives in.
+
+## Common tasks
+
+**Update a weight (e.g. new Creo number).** Edit tab → click the part's *Unit Weight*
+cell → type the number → **Save changes**. The rollup, budget margin, and every parent
+assembly update immediately.
+
+**Record where a weight came from.** Manage columns → add a dropdown column like
+`weight_basis` with choices such as *measured, Creo estimate, vendor quote* → set it per
+part in the grid. *Group by* and *Data health* will then show weight by basis and how much
+of the rollup has a basis recorded.
+
+**Add one part.** Edit tab → *Quick add a part* → pick the parent, type number/name/qty/
+weight → **Add part**.
+
+**Paste many parts from Excel.** Put columns in this order in Excel: **part number, name,
+qty, unit weight** (qty/weight optional). Copy the block, Edit tab → *Bulk add parts* →
+pick the parent → paste → **Preview** (problem rows are flagged) → **Add N parts**.
+Comma-separated lines typed by hand work too.
+
+**Delete a part.** Tick its row in the Parts grid, delete it, **Save changes**. Its BOM
+links are removed with it (the save note tells you how many).
+
+**Replace a subassembly with a new design.** Edit tab → *Replace an assembly* → pick the
+old one, give the new part number/name, untick any subparts that don't carry over →
+**Replace assembly**. The new assembly takes the old one's place everywhere it was used.
+
+**Set a weight budget.** Weight & Rollup tab → *Set / change budget* → enter the target.
+Budget / Actual / Margin then shows on top, red when over.
+
+**Run the weekly report.** History tab → *Weekly report* → check the baseline (defaults
+to the newest version at least a week old) → copy the text block at the bottom into your
+update.
+
+**See weight by drawing family, or structural vs non-structural.** Weight & Rollup →
+*Group by*. "Part family" groups `-1/-2/-501` variants of the same base drawing together;
+or group by any column you've added (e.g. `category`).
+
+**See when a part last changed, and what changed.** The read-only *Last Updated* column in
+the Parts grid, and History → *Part history* for the full change list.
+
+## How the rollup works (FAQ)
+
+- **Leave Unit Weight blank on an assembly** → its weight rolls up from its children
+  (qty × child weight, all the way down).
+- **Set Unit Weight on an assembly** → that number **overrides** the children (an
+  *allocated* weight). The children are ignored until you clear it. *Data health* lists
+  every allocation that is currently hiding children.
+- **Maturity Factor** is a growth margin multiplier: weight counts as
+  `unit weight × maturity factor` (1.0 = mature/as-designed, 1.15 = +15% growth allowance).
+- **Does a change trickle down?** Changes flow **up** automatically — the rollup is
+  recomputed live, so editing one part instantly updates every assembly above it.
+  Timestamps are per-part: touching a parent doesn't mark its children as updated.
+- A part with **no unit weight and no children** contributes 0 and is flagged in
+  *Data health*.
+
+## Where your data lives
+
+Everything — current parts, BOM links, your column definitions, and the full version
+history — is one file:
+
+```
+<data folder>/project.bom.json
+```
+
+Back it up by copying that file. The app ships pointing at `demo_data/`; use the Data tab
+to point it at your own folder (a fresh empty project is created automatically). Older
+multi-file layouts (`parts.json` + `relationships.json` + `snapshots/`) are migrated into
+the single file automatically and non-destructively on first open.
+
+## Running tests
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+## GitHub Codespaces (no local setup)
+
+Open the repo → **Code** → **Codespaces** → **Create codespace on main**. Dependencies
+install automatically and Streamlit starts in the background; open the forwarded port
+8501 when prompted. Inside the codespace: `make run`, `make test`,
+`tail -f /tmp/streamlit.log`.
+
+---
+
+## Appendix: Python API reference (for developers)
+
+The UI sits on a stdlib-only backend you can use directly:
 
 ```python
 from bom_backend import BOMBackend
 
-backend = BOMBackend(data_dir="data")  # default is "data"
+backend = BOMBackend(data_dir="data")   # opens/creates data/project.bom.json
 ```
 
-Everything for a data directory — the current parts, relationships, and the full
-version history — is stored in a single file:
+Every service method returns `{"ok": bool, "data": dict, "errors": [...], "warnings": [...]}`.
+Check `ok` first; read the payload from `data`.
 
-- `data/project.bom.json` with three sections: `parts`, `relationships`, `snapshots`
-
-Legacy layouts (`parts.json` + `relationships.json` + `snapshots/*.json`) are
-migrated into `project.bom.json` automatically and non-destructively the first time
-a `BOMBackend` opens the directory.
-
-## Response Format (All Backend Functions)
-
-Every service method returns:
-
-```python
-{
-    "ok": bool,
-    "data": dict,
-    "errors": list[str],
-    "warnings": list[str],
-}
-```
-
-- Check `result["ok"]` first.
-- Read payload from `result["data"]` on success.
-- Read `result["errors"]` on failure.
-- Use `result["warnings"]` for non-fatal issues.
-
-## Quick Usage Example
-
-```python
-from bom_backend import BOMBackend
-
-backend = BOMBackend(data_dir="data")
-
-backend.parts.add_or_update_part("A", "Assembly A", {"weight_kg": 10})
-backend.parts.add_or_update_part("B", "Part B", {"weight_kg": 2})
-backend.bom.add_or_update_relationship("A", "B", qty=2, rel_id="R1")
-
-rollup = backend.rollups.rollup_numeric_attribute("A", "weight_kg")
-print(rollup["data"]["total"])  # 14.0
-```
-
-## Backend Function Reference
-
-### `backend.parts` (Part Catalog)
+### `backend.parts` (part catalog)
 
 1. `add_or_update_part(part_number, name, attributes=None, last_updated=None, merge_attributes=True)`
-- Creates or updates a part.
-- Returns `data.part` and `data.created` (`True` if new).
+   — create or update; returns `data.part`, `data.created`.
+2. `get_part(part_number)` — returns `data.part`.
+3. `list_parts(query=None)` — optional case-insensitive search; returns `data.parts`.
+4. `delete_part(part_number, allow_if_referenced=False, cascade=False)` — with
+   `cascade=True`, deletes every relationship touching the part first and returns their
+   ids in `data.removed_relationships`; with `cascade=False` (default) it refuses while
+   references exist unless `allow_if_referenced=True`.
+5. `update_attributes(part_number, attributes, merge_attributes=True)`.
 
-2. `get_part(part_number)`
-- Fetches one part by part number.
-- Returns `data.part`.
+### `backend.bom` (relationships and structure)
 
-3. `list_parts(query=None)`
-- Lists all parts, optional case-insensitive search by part number or name.
-- Returns `data.parts`.
-
-4. `delete_part(part_number, allow_if_referenced=False)`
-- Deletes a part.
-- By default, fails if referenced by relationships.
-- Returns `data.deleted` and `data.part_number`.
-
-5. `update_attributes(part_number, attributes, merge_attributes=True)`
-- Updates only the `attributes` object on an existing part.
-- Returns updated `data.part`.
-
-### `backend.bom` (Relationships and Structure)
-
-1. `add_or_update_relationship(parent_part_number, child_part_number, qty, rel_id=None, attributes=None, last_updated=None, allow_dangling=False, merge_attributes=True)`
-- Creates or updates a relationship.
-- Validates required fields, `qty > 0`, and blocks graph cycles.
-- If parts are missing:
-  - fails by default
-  - succeeds with warnings when `allow_dangling=True`
-- Returns `data.relationship` and `data.created`.
-
-2. `delete_relationship(rel_id)`
-- Deletes a relationship by id.
-- Returns `data.deleted` and `data.rel_id`.
-
-3. `get_children(parent_part_number)`
-- Returns direct children of a parent part.
-- Returns `data.children` with both relationship and child part data.
-
-4. `get_parents(child_part_number)`
-- Returns direct parents of a child part.
-- Returns `data.parents` with both relationship and parent part data.
-
-5. `get_subgraph(root_part_number)`
-- Traverses BOM downward from root and returns reachable nodes/edges.
-- Returns `data.parts` and `data.relationships`.
+1. `add_or_update_relationship(parent_part_number, child_part_number, qty, rel_id=None,
+   attributes=None, last_updated=None, allow_dangling=False, merge_attributes=True)` —
+   validates `qty > 0`, blocks cycles; returns `data.relationship`, `data.created`.
+2. `delete_relationship(rel_id)`.
+3. `get_children(parent_part_number)` / `get_parents(child_part_number)`.
+4. `get_subgraph(root_part_number)` — reachable parts + relationships from a root.
 
 ### `backend.rollups`
 
-1. `rollup_numeric_attribute(root_part_number, attribute_key, include_root=True)`
-- Traverses from root and sums a numeric attribute through quantity multipliers.
-- Adds warnings for missing/non-numeric attributes.
-- Returns:
-  - `data.total`
-  - `data.breakdown` (per-path contribution details)
+1. `rollup_numeric_attribute(root_part_number, attribute_key, include_root=True)`.
+2. `rollup_weight_with_maturity(root_part_number, unit_weight_key="unit_weight",
+   maturity_factor_key="maturity_factor", default_maturity_factor=1.0, include_root=True,
+   top_n=10)` — the weight engine: a part with `unit_weight` contributes
+   `unit_weight × maturity_factor × path qty` and its subtree is not traversed (allocation
+   override). Returns `data.total`, `data.breakdown` (per path), `data.part_totals`
+   (per part), `data.top_contributors`, `data.unresolved_nodes`.
+3. `subtree_weight_map(default_maturity_factor=1.0)` — effective subtree weight for every
+   part in one pass; returns `data.weights` (`{part_number: weight}`).
 
-2. `rollup_weight_with_maturity(root_part_number, unit_weight_key="unit_weight", maturity_factor_key="maturity_factor", default_maturity_factor=1.0, include_root=True, top_n=10)`
-- Weight-specific rollup with override behavior for assembly weights.
-- If a part has `unit_weight`, that part contributes:
-  - `unit_weight * maturity_factor * path_quantity_multiplier`
-- When `unit_weight` is present, child rollup is stopped for that path (override).
-- If `maturity_factor` is missing, default is `1.0` (or `default_maturity_factor`).
-- Returns:
-  - `data.total`
-  - `data.breakdown` (path-level contributions)
-  - `data.part_totals` (aggregated contributions by part)
-  - `data.top_contributors` (largest contributors, limited by `top_n`)
-  - `data.unresolved_nodes` (no `unit_weight` and no children to derive from)
+### `backend.snapshots` (version history)
 
-### `backend.snapshots`
-
-1. `create_snapshot(root_part_number="", label=None, deduplicate_if_identical=True)`
-- Captures an immutable snapshot (a version in history).
-- With `root_part_number` omitted/empty, freezes the **whole project** (all parts and
-  relationships) — this backs the save-history feature.
-- With a `root_part_number`, freezes just that assembly's subgraph.
-- Computes a deterministic signature; if an identical snapshot already exists and
-  deduplication is enabled, returns the existing one with `data.deduplicated=True`
-  (so repeated saves don't bloat history).
-- Returns `data.snapshot`.
-
-2. `get_snapshot(snapshot_id)`
-- Loads one snapshot.
-- Returns `data.snapshot`.
-
-3. `list_snapshots(root_part_number=None)`
-- Lists snapshots, optionally filtered by root.
-- Returns `data.snapshots`.
+1. `create_snapshot(root_part_number="", label=None, deduplicate_if_identical=True)` —
+   empty root freezes the **whole project** (this is how save-history works); a specific
+   root freezes just that subgraph. Identical content is deduplicated by signature.
+2. `get_snapshot(snapshot_id)` / `list_snapshots(root_part_number=None)`.
 
 ### `backend.diff`
 
-1. `compare_snapshots(snapshot_id_a, snapshot_id_b)`
-- Compares two snapshots and reports:
-  - part adds/removes/modifications
-  - relationship adds/removes/modifications
-  - signature equality and overall equality flags
-- Returns diff details under `data`.
+1. `compare_snapshots(snapshot_id_a, snapshot_id_b)` — part/relationship adds, removes,
+   and modifications plus signature equality.
+2. `compare_snapshot_objects(snapshot_a, snapshot_b)` — same diff for in-memory
+   `Snapshot` objects (used to compare a baseline against unsaved live data).
 
-## Editing in the App
+### `backend.store` (project file)
 
-The Streamlit app (`streamlit run streamlit_app.py`) presents four tabs:
-
-- **Edit** — two spreadsheet-style grids (Parts, and BOM structure) you edit like Excel:
-  click a cell, type, paste, add/delete rows, then press **Save changes**. Weight and
-  maturity factor are first-class numeric columns. Optionally focus on one assembly.
-- **Weight & Rollup** — mass rollup dashboard and weight-reduction analysis.
-- **History** — save a named baseline version, load any past version (read-only), and diff
-  two versions. Every Save on the Edit tab also auto-appends a version (deduped).
-- **Data** — point at a data folder; everything lives in one `project.bom.json`.
-
-## Run Tests
-
-```bash
-python3 -m unittest discover -s tests -p "test_*.py"
-```
-
-## Run Streamlit Demo
-
-```bash
-python3 -m pip install streamlit
-streamlit run streamlit_app.py
-```
-
-## Run In GitHub Codespaces (No Local Python Setup)
-
-1. Push this repository to GitHub.
-2. Open the repository in your browser.
-3. Click **Code** > **Codespaces** > **Create codespace on main**.
-4. Wait for startup to complete. Dependencies install automatically and Streamlit auto-starts in the background.
-5. Open the forwarded port `8501` when prompted.
-
-Direct URL pattern you can share:
-
-```text
-https://github.com/<owner>/<repo>/codespaces
-```
-
-Useful commands inside Codespaces:
-
-```bash
-make run          # run app in foreground
-make test         # run backend tests
-tail -f /tmp/streamlit.log
-pkill -f "streamlit run streamlit_app.py"  # stop background app
-```
+`read_section(name)` / `write_section(name, records)` for `parts` / `relationships` /
+`snapshots`; `read_settings()` / `write_settings(dict)` for project settings (e.g.
+user-defined column types/choices under `settings["columns"]`); `batch()` context manager
+groups many writes into one atomic file write.

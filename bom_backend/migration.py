@@ -82,6 +82,7 @@ def migrate_legacy_if_needed(data_dir: str | Path) -> bool:
         "parts": parts,
         "relationships": relationships,
         "snapshots": snapshots,
+        "settings": {},
     }
 
     base.mkdir(parents=True, exist_ok=True)

@@ -308,6 +308,157 @@ class TestBOMBackend(unittest.TestCase):
         self.assertEqual(len(result["data"]["relationships"]), 0)
 
 
+class TestBaseNumber(unittest.TestCase):
+    def test_base_number(self) -> None:
+        from bom_backend.utils.parsing import base_number
+
+        self.assertEqual(base_number("20547015-101"), "20547015")
+        self.assertEqual(base_number("20553750"), "20553750")
+        self.assertEqual(base_number("a-b-c"), "a-b")  # only the last dash is the suffix
+        self.assertEqual(base_number("  20541500-508  "), "20541500")
+        self.assertEqual(base_number(""), "")
+
+
+class TestCascadeDelete(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.backend = BOMBackend(data_dir=self.tmp.name)
+        self.backend.parts.add_or_update_part("A", "Assembly A")
+        self.backend.parts.add_or_update_part("B", "Part B")
+        self.backend.parts.add_or_update_part("C", "Part C")
+        self.backend.bom.add_or_update_relationship("A", "B", qty=1, rel_id="R1")
+        self.backend.bom.add_or_update_relationship("B", "C", qty=2, rel_id="R2")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_cascade_removes_links_both_directions(self) -> None:
+        result = self.backend.parts.delete_part("B", cascade=True)
+        self.assertTrue(result["ok"])
+        # B is a child of A (R1) and a parent of C (R2) — both links must go.
+        self.assertEqual(sorted(result["data"]["removed_relationships"]), ["R1", "R2"])
+        self.assertTrue(any("2 BOM link" in w for w in result["warnings"]))
+        self.assertEqual(len(self.backend.relationship_repo.list_relationships()), 0)
+        self.assertIsNone(self.backend.part_repo.get("B"))
+        # Unrelated parts survive.
+        self.assertIsNotNone(self.backend.part_repo.get("A"))
+
+    def test_without_cascade_still_blocks(self) -> None:
+        result = self.backend.parts.delete_part("B")
+        self.assertFalse(result["ok"])
+
+    def test_cascade_inside_batch(self) -> None:
+        with self.backend.store.batch():
+            result = self.backend.parts.delete_part("B", cascade=True)
+        self.assertTrue(result["ok"])
+        fresh = BOMBackend(data_dir=self.tmp.name)
+        self.assertEqual(len(fresh.relationship_repo.list_relationships()), 0)
+
+
+class TestSubtreeWeightMap(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.backend = BOMBackend(data_dir=self.tmp.name)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_agrees_with_rollup(self) -> None:
+        b = self.backend
+        # Diamond with maturity + override + repeated child:
+        #   TOP -> M1 (x2), TOP -> M2 (x1); M1 -> LEAF (x3), M2 -> LEAF (x1)
+        #   OVR has unit_weight AND children (override wins).
+        b.parts.add_or_update_part("TOP", "Top")
+        b.parts.add_or_update_part("M1", "Mid 1")
+        b.parts.add_or_update_part("M2", "Mid 2")
+        b.parts.add_or_update_part("LEAF", "Leaf", {"unit_weight": 2.0, "maturity_factor": 1.5})
+        b.parts.add_or_update_part("OVR", "Override", {"unit_weight": 10.0})
+        b.parts.add_or_update_part("HIDDEN", "Hidden", {"unit_weight": 99.0})
+        b.bom.add_or_update_relationship("TOP", "M1", qty=2, rel_id="R1")
+        b.bom.add_or_update_relationship("TOP", "M2", qty=1, rel_id="R2")
+        b.bom.add_or_update_relationship("M1", "LEAF", qty=3, rel_id="R3")
+        b.bom.add_or_update_relationship("M2", "LEAF", qty=1, rel_id="R4")
+        b.bom.add_or_update_relationship("TOP", "OVR", qty=1, rel_id="R5")
+        b.bom.add_or_update_relationship("OVR", "HIDDEN", qty=5, rel_id="R6")
+
+        weights = b.rollups.subtree_weight_map()["data"]["weights"]
+        for root in ("TOP", "M1", "M2", "OVR", "LEAF"):
+            rollup_total = b.rollups.rollup_weight_with_maturity(root, include_root=True)["data"]["total"]
+            self.assertAlmostEqual(weights[root], rollup_total, places=9, msg=root)
+
+    def test_cycle_contributes_zero(self) -> None:
+        b = self.backend
+        b.parts.add_or_update_part("X", "X")
+        b.parts.add_or_update_part("Y", "Y")
+        # Force a cycle directly at the repo layer (service would refuse).
+        from bom_backend.models import Relationship
+
+        b.relationship_repo.upsert(Relationship("RX", "X", "Y", 1.0, "2026-01-01T00:00:00Z", {}))
+        b.relationship_repo.upsert(Relationship("RY", "Y", "X", 1.0, "2026-01-01T00:00:00Z", {}))
+        result = b.rollups.subtree_weight_map()
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["data"]["weights"]["X"], 0.0)
+
+
+class TestCompareSnapshotObjects(unittest.TestCase):
+    def test_matches_compare_snapshots(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        try:
+            backend = BOMBackend(data_dir=tmp.name)
+            backend.parts.add_or_update_part("A", "Assembly A", {"unit_weight": 5})
+            snap1 = backend.snapshots.create_snapshot(label="one")["data"]["snapshot"]
+            backend.parts.update_attributes("A", {"unit_weight": 7})
+            snap2 = backend.snapshots.create_snapshot(label="two")["data"]["snapshot"]
+
+            by_id = backend.diff.compare_snapshots(snap1["snapshot_id"], snap2["snapshot_id"])
+            from bom_backend.serialization import snapshot_from_record
+
+            by_obj = backend.diff.compare_snapshot_objects(
+                snapshot_from_record(snap1), snapshot_from_record(snap2)
+            )
+            self.assertTrue(by_id["ok"] and by_obj["ok"])
+            self.assertEqual(by_id["data"], by_obj["data"])
+        finally:
+            tmp.cleanup()
+
+
+class TestSettingsSection(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / PROJECT_FILENAME
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_settings_roundtrip_and_default(self) -> None:
+        store = ProjectStore(self.path)
+        self.assertEqual(store.read_settings(), {})
+        store.write_settings({"columns": {"category": {"type": "choice", "choices": ["a"]}}})
+        fresh = ProjectStore(self.path)
+        self.assertEqual(fresh.read_settings()["columns"]["category"]["choices"], ["a"])
+
+    def test_settings_survive_section_writes_and_batch(self) -> None:
+        store = ProjectStore(self.path)
+        store.write_settings({"columns": {"zone": {"type": "text"}}})
+        store.write_section("parts", [{"part_number": "A"}])
+        self.assertEqual(store.read_settings()["columns"]["zone"]["type"], "text")
+
+        with store.batch():
+            store.write_settings({"columns": {}})
+            store.write_section("parts", [])
+        fresh = ProjectStore(self.path)
+        self.assertEqual(fresh.read_settings(), {"columns": {}})
+        self.assertEqual(fresh.read_section("parts"), [])
+
+    def test_missing_settings_key_defaults_empty(self) -> None:
+        # A v2 file written before the settings section existed.
+        self.path.write_text(
+            json.dumps({"version": 2, "parts": [], "relationships": [], "snapshots": []})
+        )
+        store = ProjectStore(self.path)
+        self.assertEqual(store.read_settings(), {})
+
+
 class TestProjectStore(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -347,7 +498,9 @@ class TestProjectStore(unittest.TestCase):
         self.assertTrue(self.path.exists())
         with self.path.open() as handle:
             document = json.load(handle)
-        self.assertEqual(set(document.keys()), {"version", "parts", "relationships", "snapshots"})
+        self.assertEqual(
+            set(document.keys()), {"version", "parts", "relationships", "snapshots", "settings"}
+        )
         self.assertEqual(len(document["parts"]), 1)
         self.assertEqual(len(document["relationships"]), 1)
         self.assertEqual(len(document["snapshots"]), 1)

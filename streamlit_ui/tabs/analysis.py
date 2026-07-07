@@ -32,6 +32,7 @@ def _render_weight_impact(
     snapshot_backend: Any,
     snapshot_a: dict[str, Any],
     snapshot_b: dict[str, Any],
+    fallback_root: str = "",
 ) -> None:
     """Compute and display weight rollup comparison between two snapshots."""
     snap_a_full = snapshot_backend.snapshots.get_snapshot(snapshot_a["snapshot_id"])
@@ -44,8 +45,15 @@ def _render_weight_impact(
     record_a = snap_a_full["data"]["snapshot"]
     record_b = snap_b_full["data"]["snapshot"]
 
-    weight_a = _run_weight_rollup(record_a, snapshot_a["root_part_number"])
-    weight_b = _run_weight_rollup(record_b, snapshot_b["root_part_number"])
+    # Whole-project versions carry no root of their own — roll up the current root instead.
+    root_a = snapshot_a["root_part_number"] or fallback_root
+    root_b = snapshot_b["root_part_number"] or fallback_root
+    if not root_a or not root_b:
+        st.info("Pick a root assembly in the sidebar to compare weight totals.")
+        return
+
+    weight_a = _run_weight_rollup(record_a, root_a)
+    weight_b = _run_weight_rollup(record_b, root_b)
 
     if not weight_a or not weight_b:
         st.warning("Could not compute weight rollup for one or both snapshots.")
@@ -90,9 +98,20 @@ def _render_weight_impact(
 
     if weight_changes:
         st.markdown("**Parts with Weight Changes**")
-        st.dataframe(weight_changes, use_container_width=True, hide_index=True)
+        st.dataframe(weight_changes, width="stretch", hide_index=True)
     else:
         st.info("No per-part weight changes detected between snapshots.")
+
+
+def _format_attribute_changes(attrs: dict[str, Any]) -> list[str]:
+    details: list[str] = []
+    for key, val in attrs.get("added", {}).items():
+        details.append(f"+{key}: {val}")
+    for key, val in attrs.get("removed", {}).items():
+        details.append(f"-{key}: {val}")
+    for key, val in attrs.get("modified", {}).items():
+        details.append(f"{key}: {val['before']} → {val['after']}")
+    return details
 
 
 def _render_structural_changes(diff_data: dict[str, Any]) -> None:
@@ -111,7 +130,7 @@ def _render_structural_changes(diff_data: dict[str, Any]) -> None:
         st.markdown("**Added Parts**")
         st.dataframe(
             [{"Part Number": p["part_number"], "Name": p["name"]} for p in part_changes["added"]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -119,7 +138,7 @@ def _render_structural_changes(diff_data: dict[str, Any]) -> None:
         st.markdown("**Removed Parts**")
         st.dataframe(
             [{"Part Number": p["part_number"], "Name": p["name"]} for p in part_changes["removed"]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -131,18 +150,12 @@ def _render_structural_changes(diff_data: dict[str, Any]) -> None:
             details: list[str] = []
             if changes.get("name"):
                 details.append(f"Name: {changes['name']['before']} \u2192 {changes['name']['after']}")
-            attrs = changes.get("attributes", {})
-            for key, val in attrs.get("added", {}).items():
-                details.append(f"+{key}: {val}")
-            for key, val in attrs.get("removed", {}).items():
-                details.append(f"-{key}: {val}")
-            for key, val in attrs.get("modified", {}).items():
-                details.append(f"{key}: {val['before']} \u2192 {val['after']}")
+            details.extend(_format_attribute_changes(changes.get("attributes", {})))
             mod_rows.append({
                 "Part Number": mod["part_number"],
                 "Changes": "; ".join(details) if details else "timestamps only",
             })
-        st.dataframe(mod_rows, use_container_width=True, hide_index=True)
+        st.dataframe(mod_rows, width="stretch", hide_index=True)
 
     if rel_changes["added"]:
         st.markdown("**Added Relationships**")
@@ -151,7 +164,7 @@ def _render_structural_changes(diff_data: dict[str, Any]) -> None:
                 {"Parent": r["parent_part_number"], "Child": r["child_part_number"], "Qty": r["qty"]}
                 for r in rel_changes["added"]
             ],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -162,7 +175,7 @@ def _render_structural_changes(diff_data: dict[str, Any]) -> None:
                 {"Parent": r["parent_part_number"], "Child": r["child_part_number"], "Qty": r["qty"]}
                 for r in rel_changes["removed"]
             ],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -182,18 +195,12 @@ def _render_structural_changes(diff_data: dict[str, Any]) -> None:
                 details.append(
                     f"Child: {changes['child_part_number']['before']} \u2192 {changes['child_part_number']['after']}"
                 )
-            attrs = changes.get("attributes", {})
-            for key, val in attrs.get("added", {}).items():
-                details.append(f"+{key}: {val}")
-            for key, val in attrs.get("removed", {}).items():
-                details.append(f"-{key}: {val}")
-            for key, val in attrs.get("modified", {}).items():
-                details.append(f"{key}: {val['before']} \u2192 {val['after']}")
+            details.extend(_format_attribute_changes(changes.get("attributes", {})))
             mod_rel_rows.append({
                 "Rel ID": mod["rel_id"],
                 "Changes": "; ".join(details) if details else "timestamps only",
             })
-        st.dataframe(mod_rel_rows, use_container_width=True, hide_index=True)
+        st.dataframe(mod_rel_rows, width="stretch", hide_index=True)
 
     has_any = any([
         part_changes["added"], part_changes["removed"], part_changes["modified"],
@@ -224,8 +231,9 @@ def render_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
     for item in latest_snapshots:
         label_part = f" ({item['label']})" if item.get("label") else ""
         ts = format_timestamp(item["created_at"])
+        scope = item["root_part_number"] or "whole project"
         snapshot_labels.append(
-            f"{item['root_part_number']}{label_part} \u2014 {ts} [{item['snapshot_id'][-12:]}]"
+            f"{scope}{label_part} \u2014 {ts} [{item['snapshot_id'][-12:]}]"
         )
 
     default_a = max(0, len(snapshot_labels) - 2)
@@ -245,10 +253,11 @@ def render_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
     snapshot_a = map_label_to_snapshot[selection_a]
     snapshot_b = map_label_to_snapshot[selection_b]
 
-    if snapshot_a["root_part_number"] != snapshot_b["root_part_number"]:
+    root_a = snapshot_a["root_part_number"]
+    root_b = snapshot_b["root_part_number"]
+    if root_a != root_b and root_a and root_b:
         st.warning(
-            f"These snapshots have different roots: "
-            f"**{snapshot_a['root_part_number']}** vs **{snapshot_b['root_part_number']}**. "
+            f"These snapshots have different roots: **{root_a}** vs **{root_b}**. "
             f"Weight comparison may not be meaningful."
         )
 
@@ -264,7 +273,7 @@ def render_analysis_tab(ctx: AppContext, root_part_number: str) -> None:
     # Weight impact
     st.divider()
     st.subheader("Weight Impact")
-    _render_weight_impact(snapshot_backend, snapshot_a, snapshot_b)
+    _render_weight_impact(snapshot_backend, snapshot_a, snapshot_b, fallback_root=root_part_number)
 
     # Structural changes
     st.divider()

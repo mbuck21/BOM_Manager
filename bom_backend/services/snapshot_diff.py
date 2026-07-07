@@ -187,6 +187,14 @@ class SnapshotDiffService:
         if errors:
             return err_result(errors)
 
+        return self.compare_snapshot_objects(snapshot_a, snapshot_b)
+
+    @service_guard
+    def compare_snapshot_objects(self, snapshot_a: Snapshot, snapshot_b: Snapshot) -> ServiceResult:
+        """Diff two Snapshot objects directly (they need not be saved in the repository).
+
+        Lets callers compare a stored baseline against an in-memory snapshot of live data.
+        """
         signature_equal = snapshot_a.signature == snapshot_b.signature
 
         parts_a = {part.part_number: part for part in snapshot_a.parts}

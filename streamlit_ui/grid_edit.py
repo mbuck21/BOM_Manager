@@ -20,6 +20,7 @@ from typing import Any
 from bom_backend.constants import MATURITY_FACTOR_KEY, UNIT_WEIGHT_KEY
 
 ROW_ID = "_row_id"
+LAST_UPDATED_COLUMN = "last_updated"
 RESERVED_PART_COLUMNS = ("part_number", "name", UNIT_WEIGHT_KEY, MATURITY_FACTOR_KEY)
 NUMERIC_PART_COLUMNS = (UNIT_WEIGHT_KEY, MATURITY_FACTOR_KEY)
 
@@ -104,6 +105,8 @@ def build_parts_grid(parts: list[dict[str, Any]]) -> PartsGrid:
             "name": part.get("name", ""),
             UNIT_WEIGHT_KEY: coerce_number(attributes.get(UNIT_WEIGHT_KEY)),
             MATURITY_FACTOR_KEY: coerce_number(attributes.get(MATURITY_FACTOR_KEY)),
+            # Display-only; excluded from reconciliation (never written back).
+            LAST_UPDATED_COLUMN: part.get("last_updated", ""),
         }
 
         leftover: dict[str, Any] = {}
