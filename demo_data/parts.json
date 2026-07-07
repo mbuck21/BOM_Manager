@@ -721,8 +721,11 @@
       "part_number": "20549160-501"
     },
     {
-      "attributes": {},
-      "last_updated": "2026-02-12T00:39:10Z",
+      "attributes": {
+        "maturity_factor": 1.1,
+        "unit_weight": 451
+      },
+      "last_updated": "2026-02-26T16:19:17Z",
       "name": "RADOME",
       "part_number": "20549221-1"
     },
@@ -1389,6 +1392,16 @@
       "last_updated": "2026-02-12T00:39:11Z",
       "name": "DOOR ASSEMBLY",
       "part_number": "20554790-501"
+    },
+    {
+      "attributes": {
+        "can_weight_optimized": false,
+        "maturity_factor": 1.03,
+        "unit_weight": 425
+      },
+      "last_updated": "2026-03-11T12:49:42Z",
+      "name": "Total Fluid Weight",
+      "part_number": "Fluid"
     }
   ]
 }
