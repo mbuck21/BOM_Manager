@@ -22,6 +22,22 @@ def format_timestamp(iso_str: str) -> str:
         return iso_str
 
 
+def data_dir_from_args(args: list[str]) -> str:
+    """--data-dir value from the script's command-line args, or "".
+
+    Streamlit forwards everything after a standalone ``--`` to the script, e.g.
+    ``streamlit run streamlit_app.py -- --data-dir C:/weights/my_program``.
+    Only the explicit flag is honored (no bare positionals — test runners put
+    unrelated tokens in sys.argv).
+    """
+    for index, arg in enumerate(args):
+        if arg == "--data-dir" and index + 1 < len(args):
+            return args[index + 1].strip()
+        if arg.startswith("--data-dir="):
+            return arg.split("=", 1)[1].strip()
+    return ""
+
+
 def resolve_data_dir(raw_value: str) -> Path:
     candidate = Path(raw_value.strip() or "demo_data").expanduser()
     if not candidate.is_absolute():

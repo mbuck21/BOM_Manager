@@ -5,10 +5,13 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
 import streamlit as st
 
 from streamlit_ui.context import build_app_context
-from streamlit_ui.helpers import resolve_data_dir
+from streamlit_ui.helpers import data_dir_from_args, resolve_data_dir
 from streamlit_ui.sidebar import render_root_sidebar
 from streamlit_ui.state import (
     ACTIVE_SNAPSHOT_ID_KEY,
@@ -51,7 +54,13 @@ def main() -> None:
     )
 
     if DATA_DIR_KEY not in st.session_state:
-        st.session_state[DATA_DIR_KEY] = "demo_data"
+        # Startup data folder: `streamlit run streamlit_app.py -- --data-dir <path>`
+        # wins, then the BOM_DATA_DIR environment variable, then the bundled demo.
+        st.session_state[DATA_DIR_KEY] = (
+            data_dir_from_args(sys.argv[1:])
+            or os.environ.get("BOM_DATA_DIR", "").strip()
+            or "demo_data"
+        )
     if DATA_DIR_INPUT_KEY not in st.session_state:
         st.session_state[DATA_DIR_INPUT_KEY] = st.session_state[DATA_DIR_KEY]
 

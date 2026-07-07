@@ -31,7 +31,27 @@ understanding and reporting weight.
    streamlit run streamlit_app.py
    ```
 
+   **If `streamlit` is not recognized** (common on Windows — the launcher lives in a
+   `Scripts` folder that isn't always on PATH), run it through Python instead; this
+   always works:
+
+   ```bash
+   python -m streamlit run streamlit_app.py
+   ```
+
    Your browser opens at `http://localhost:8501` with example data loaded.
+
+4. **Open your own data folder at launch** (optional). Everything after a standalone
+   `--` goes to the app:
+
+   ```bash
+   python -m streamlit run streamlit_app.py -- --data-dir "C:\weights\my_program"
+   ```
+
+   Or set the `BOM_DATA_DIR` environment variable to the folder path. Either way the
+   app opens straight on that folder (a fresh empty project is created if it's new);
+   you can still switch folders later on the **Data** tab. Handy for a desktop
+   shortcut: one per program, each pointing at its own folder.
 
 > **If something goes wrong:** if `python` isn't found, try `python3` (and `python3 -m pip`).
 > If the browser doesn't open, browse to `http://localhost:8501` yourself.

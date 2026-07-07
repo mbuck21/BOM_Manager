@@ -12,6 +12,7 @@ from streamlit_ui.context import build_app_context
 from streamlit_ui.helpers import (
     build_part_lookup,
     collect_service_result,
+    data_dir_from_args,
     part_key,
     resolve_data_dir,
 )
@@ -42,6 +43,19 @@ class TestHelpers(unittest.TestCase):
         result = resolve_data_dir("")
         self.assertTrue(result.is_absolute())
         self.assertTrue(str(result).endswith("demo_data"))
+
+    # ---------------------------------------------------------------- data_dir_from_args
+
+    def test_data_dir_from_args_flag_forms(self) -> None:
+        self.assertEqual(data_dir_from_args(["--data-dir", "C:/weights/prog"]), "C:/weights/prog")
+        self.assertEqual(data_dir_from_args(["--data-dir=my_folder"]), "my_folder")
+        self.assertEqual(data_dir_from_args(["--other", "x", "--data-dir", " padded "]), "padded")
+
+    def test_data_dir_from_args_ignores_everything_else(self) -> None:
+        # Test runners put unrelated tokens in sys.argv — none may be mistaken for a path.
+        self.assertEqual(data_dir_from_args([]), "")
+        self.assertEqual(data_dir_from_args(["discover", "-s", "tests", "-p", "test_*.py"]), "")
+        self.assertEqual(data_dir_from_args(["--data-dir"]), "")  # flag without a value
 
     # ---------------------------------------------------------------- part lookups
 

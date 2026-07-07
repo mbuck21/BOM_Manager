@@ -15,8 +15,14 @@ full module map before making structural changes; `README.md` is the user-facing
 ```bash
 pip install -r requirements.txt                       # streamlit only
 streamlit run streamlit_app.py                        # opens on demo_data/
+python -m streamlit run streamlit_app.py              # same, when `streamlit` isn't on PATH
+python -m streamlit run streamlit_app.py -- --data-dir <path>   # open a specific folder
 python -m unittest discover -s tests -p "test_*.py"   # full suite, <1s
 ```
+
+The startup data folder resolves as: `--data-dir` script arg (after the standalone `--`)
+→ `BOM_DATA_DIR` env var → `demo_data`. Parsed by `helpers.data_dir_from_args`
+(explicit flag only — bare positionals would collide with test-runner argv).
 
 Headless app verification uses Streamlit's AppTest (this is how past rounds were
 verified — prefer it over assuming):
