@@ -19,11 +19,16 @@ from streamlit_ui.seed import seed_demo_data
 # in a non-running Streamlit context; only st.* calls inside functions fail.
 # We only test functions that do NOT call st.*.
 from streamlit_ui.helpers import (
-    parse_csv_whitelist,
     parse_json_object,
     part_rows,
     relationship_rows,
     resolve_data_dir,
+)
+from streamlit_ui.grid_edit import (
+    build_bom_grid,
+    build_parts_grid,
+    reconcile_bom,
+    reconcile_parts,
 )
 
 
@@ -65,20 +70,6 @@ class TestHelpers(unittest.TestCase):
     def test_parse_json_object_invalid_json_raises(self) -> None:
         with self.assertRaises(ValueError):
             parse_json_object("{bad json}", "test")
-
-    # ---------------------------------------------------------------- parse_csv_whitelist
-
-    def test_parse_csv_whitelist_basic(self) -> None:
-        result = parse_csv_whitelist("weight_kg, material, cost")
-        self.assertEqual(result, ["weight_kg", "material", "cost"])
-
-    def test_parse_csv_whitelist_empty_string(self) -> None:
-        result = parse_csv_whitelist("")
-        self.assertEqual(result, [])
-
-    def test_parse_csv_whitelist_trailing_comma(self) -> None:
-        result = parse_csv_whitelist("a, b, ")
-        self.assertEqual(result, ["a", "b"])
 
     # ---------------------------------------------------------------- part_rows / relationship_rows
 
@@ -269,6 +260,76 @@ class TestContext(unittest.TestCase):
         ctx = build_app_context(self.data_dir, selected_snapshot_id=None, default_to_latest=True)
         self.assertTrue(ctx.snapshot_mode)
         self.assertEqual(ctx.loaded_snapshot_id, snap_id)
+
+
+class TestGridReconciliation(unittest.TestCase):
+    """Pure diff-and-apply logic for the spreadsheet Edit tab (no Streamlit session)."""
+
+    def _parts(self):
+        return [
+            {"part_number": "A", "name": "Assembly A", "attributes": {"unit_weight": 10.0, "material": "Steel"}},
+            {"part_number": "B", "name": "Part B", "attributes": {"unit_weight": 2.0}},
+        ]
+
+    def test_parts_no_change(self) -> None:
+        grid = build_parts_grid(self._parts())
+        plan = reconcile_parts(grid, [dict(row) for row in grid.rows])
+        self.assertTrue(plan.is_empty)
+
+    def test_parts_edit_weight(self) -> None:
+        grid = build_parts_grid(self._parts())
+        edited = [dict(row) for row in grid.rows]
+        edited[1]["unit_weight"] = 5.0  # change B's weight
+        plan = reconcile_parts(grid, edited)
+        self.assertEqual(len(plan.updates), 1)
+        self.assertEqual(plan.updates[0].part_number, "B")
+        self.assertEqual(plan.updates[0].attributes["unit_weight"], 5.0)
+
+    def test_parts_add_row(self) -> None:
+        grid = build_parts_grid(self._parts())
+        edited = [dict(row) for row in grid.rows]
+        edited.append({"part_number": "C", "name": "Part C", "unit_weight": 1.0})
+        plan = reconcile_parts(grid, edited)
+        self.assertEqual(len(plan.creates), 1)
+        self.assertEqual(plan.creates[0].part_number, "C")
+
+    def test_parts_delete_row(self) -> None:
+        grid = build_parts_grid(self._parts())
+        edited = [dict(grid.rows[0])]  # drop B
+        plan = reconcile_parts(grid, edited)
+        self.assertEqual(plan.deletes, ["B"])
+
+    def test_parts_rename(self) -> None:
+        grid = build_parts_grid(self._parts())
+        edited = [dict(row) for row in grid.rows]
+        edited[0]["part_number"] = "A2"
+        plan = reconcile_parts(grid, edited)
+        self.assertEqual(len(plan.renames), 1)
+        self.assertEqual(plan.renames[0].old_part_number, "A")
+        self.assertEqual(plan.renames[0].part_number, "A2")
+
+    def test_parts_preserve_nested_attribute(self) -> None:
+        parts = [{"part_number": "A", "name": "A", "attributes": {"nested": {"k": 1}}}]
+        grid = build_parts_grid(parts)
+        plan = reconcile_parts(grid, [dict(row) for row in grid.rows])
+        self.assertTrue(plan.is_empty)  # nested value round-trips untouched
+
+    def test_bom_add_and_change_and_delete(self) -> None:
+        rels = [
+            {"rel_id": "R1", "parent_part_number": "A", "child_part_number": "B", "qty": 2.0, "attributes": {}},
+            {"rel_id": "R2", "parent_part_number": "A", "child_part_number": "C", "qty": 1.0, "attributes": {}},
+        ]
+        grid = build_bom_grid(rels)
+        edited = [dict(grid.rows[0])]  # keep R1, drop R2
+        edited[0]["qty"] = 3.0  # change R1 qty
+        edited.append({"rel_id": "", "parent_part_number": "A", "child_part_number": "D", "qty": 4.0})
+        plan = reconcile_bom(grid, edited)
+
+        self.assertEqual(plan.deletes, ["R2"])
+        upserts_by_id = {op.rel_id: op for op in plan.upserts}
+        self.assertEqual(upserts_by_id["R1"].qty, 3.0)
+        self.assertIn(None, upserts_by_id)  # the new A->D link
+        self.assertEqual(upserts_by_id[None].child_part_number, "D")
 
 
 if __name__ == "__main__":

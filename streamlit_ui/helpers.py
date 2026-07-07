@@ -45,11 +45,6 @@ def parse_json_object(raw: str, field_name: str) -> dict[str, Any]:
     return parsed
 
 
-def parse_csv_whitelist(raw: str) -> list[str]:
-    values = [item.strip() for item in raw.split(",")]
-    return [item for item in values if item]
-
-
 def part_rows(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
@@ -89,11 +84,3 @@ def show_service_result(title: str, result: dict[str, Any], *, show_data: bool =
 
     if show_data and result.get("data"):
         st.json(result["data"])
-
-
-def save_uploaded_csv(data_dir: Path, category: str, uploaded_file: Any) -> Path:
-    import_dir = data_dir / "imports" / category
-    import_dir.mkdir(parents=True, exist_ok=True)
-    target = import_dir / Path(str(uploaded_file.name)).name
-    target.write_bytes(uploaded_file.getvalue())
-    return target

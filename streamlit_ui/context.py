@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from bom_backend import BOMBackend
+from bom_backend.store import CURRENT_VERSION, PROJECT_FILENAME
 
 
 @dataclass
@@ -52,15 +53,16 @@ def _build_snapshot_backend(snapshot_record: dict[str, Any]) -> BOMBackend:
     runtime_dir = _snapshot_runtime_dir(snapshot_id)
     runtime_dir.mkdir(parents=True, exist_ok=True)
 
-    parts_payload = {"parts": list(snapshot_record.get("parts") or [])}
-    relationships_payload = {"relationships": list(snapshot_record.get("relationships") or [])}
-
-    with (runtime_dir / "parts.json").open("w", encoding="utf-8") as handle:
-        json.dump(parts_payload, handle, indent=2, sort_keys=True, ensure_ascii=True)
-        handle.write("\n")
-
-    with (runtime_dir / "relationships.json").open("w", encoding="utf-8") as handle:
-        json.dump(relationships_payload, handle, indent=2, sort_keys=True, ensure_ascii=True)
+    # Materialize the frozen snapshot into a throwaway single-file project so the same
+    # read API works. Snapshots section is left empty (this is a read-only view).
+    document = {
+        "version": CURRENT_VERSION,
+        "parts": list(snapshot_record.get("parts") or []),
+        "relationships": list(snapshot_record.get("relationships") or []),
+        "snapshots": [],
+    }
+    with (runtime_dir / PROJECT_FILENAME).open("w", encoding="utf-8") as handle:
+        json.dump(document, handle, indent=2, sort_keys=True, ensure_ascii=True)
         handle.write("\n")
 
     return BOMBackend(data_dir=runtime_dir)

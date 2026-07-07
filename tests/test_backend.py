@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import csv
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from bom_backend import BOMBackend
+from bom_backend.store import PROJECT_FILENAME, ProjectStore
 
 
 class TestBOMBackend(unittest.TestCase):
@@ -69,70 +70,37 @@ class TestBOMBackend(unittest.TestCase):
         self.assertFalse(diff["data"]["signature_equal"])
         self.assertGreaterEqual(len(diff["data"]["part_changes"]["modified"]), 1)
 
-    def test_csv_import_export(self) -> None:
-        parts_csv = Path(self.tmp.name) / "parts.csv"
-        with parts_csv.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(
-                handle,
-                fieldnames=["part_number", "name", "weight_kg", "material", "attributes_json"],
-            )
-            writer.writeheader()
-            writer.writerow(
-                {
-                    "part_number": "A",
-                    "name": "Assembly A",
-                    "weight_kg": "12.5",
-                    "material": "Steel",
-                    "attributes_json": '{"cost": 42.3}',
-                }
-            )
+    def test_whole_project_snapshot_and_dedup(self) -> None:
+        self.backend.parts.add_or_update_part("A", "Assembly A", {"weight_kg": 10})
+        self.backend.parts.add_or_update_part("B", "Part B", {"weight_kg": 2})
+        self.backend.bom.add_or_update_relationship("A", "B", qty=1, rel_id="R1")
 
-        rels_csv = Path(self.tmp.name) / "rels.csv"
-        with rels_csv.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(
-                handle,
-                fieldnames=["rel_id", "parent_part_number", "child_part_number", "qty", "find_no"],
-            )
-            writer.writeheader()
-            writer.writerow(
-                {
-                    "rel_id": "R1",
-                    "parent_part_number": "A",
-                    "child_part_number": "B",
-                    "qty": "2",
-                    "find_no": "10",
-                }
-            )
+        v1 = self.backend.snapshots.create_snapshot(label="project baseline")
+        self.assertTrue(v1["ok"])
+        self.assertFalse(v1["data"]["deduplicated"])
+        snap = v1["data"]["snapshot"]
+        self.assertEqual(snap["root_part_number"], "")
+        self.assertEqual(len(snap["parts"]), 2)
+        self.assertEqual(len(snap["relationships"]), 1)
 
-        import_parts = self.backend.csv.import_parts_csv(parts_csv)
-        self.assertTrue(import_parts["ok"])
-
-        # Child B missing in catalog, but allowed for this CSV import call.
-        import_relationships = self.backend.csv.import_relationships_csv(
-            rels_csv,
-            allow_dangling=True,
-        )
-        self.assertTrue(import_relationships["ok"])
-
-        exported_parts_csv = Path(self.tmp.name) / "parts_out.csv"
-        exported_rels_csv = Path(self.tmp.name) / "rels_out.csv"
-
-        export_parts = self.backend.csv.export_parts_csv(
-            exported_parts_csv,
-            attribute_whitelist=["weight_kg", "material", "cost"],
-        )
-        export_relationships = self.backend.csv.export_relationships_csv(
-            exported_rels_csv,
-            attribute_whitelist=["find_no"],
+        # Identical save is deduplicated (no history bloat).
+        v2 = self.backend.snapshots.create_snapshot()
+        self.assertTrue(v2["ok"])
+        self.assertTrue(v2["data"]["deduplicated"])
+        self.assertEqual(
+            v2["data"]["snapshot"]["snapshot_id"], snap["snapshot_id"]
         )
 
-        self.assertTrue(export_parts["ok"])
-        self.assertTrue(export_relationships["ok"])
-
-        with exported_parts_csv.open("r", encoding="utf-8") as handle:
-            text = handle.read()
-        self.assertIn("weight_kg", text)
-        self.assertIn("12.5", text)
+        # A real change produces a distinct version and a usable diff.
+        self.backend.parts.update_attributes("B", {"weight_kg": 3})
+        v3 = self.backend.snapshots.create_snapshot()
+        self.assertTrue(v3["ok"])
+        self.assertFalse(v3["data"]["deduplicated"])
+        diff = self.backend.diff.compare_snapshots(
+            snap["snapshot_id"], v3["data"]["snapshot"]["snapshot_id"]
+        )
+        self.assertTrue(diff["ok"])
+        self.assertFalse(diff["data"]["signature_equal"])
 
     def test_rollup_numeric_attribute(self) -> None:
         self.backend.parts.add_or_update_part("A", "Assembly A", {"weight_kg": 10})
@@ -320,41 +288,6 @@ class TestBOMBackend(unittest.TestCase):
         self.assertGreaterEqual(len(result["warnings"]), 1)
         self.assertTrue(any("non-numeric" in w for w in result["warnings"]))
 
-    # ------------------------------------------------------- CSV edge cases --
-
-    def test_csv_import_missing_required_column(self) -> None:
-        bad_csv = Path(self.tmp.name) / "bad_parts.csv"
-        with bad_csv.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=["part_number"])  # missing 'name'
-            writer.writeheader()
-            writer.writerow({"part_number": "X"})
-
-        result = self.backend.csv.import_parts_csv(bad_csv)
-        self.assertFalse(result["ok"])
-        self.assertTrue(any("name" in e for e in result["errors"]))
-
-    def test_csv_export_roundtrip_preserves_data(self) -> None:
-        self.backend.parts.add_or_update_part("P1", "Widget", {"cost": 9.99, "material": "ABS"})
-        self.backend.parts.add_or_update_part("P2", "Bolt", {"cost": 0.25})
-
-        out_csv = Path(self.tmp.name) / "roundtrip.csv"
-        self.backend.csv.export_parts_csv(out_csv, attribute_whitelist=["cost", "material"])
-
-        # Import into a fresh backend and compare
-        tmp2 = tempfile.TemporaryDirectory()
-        try:
-            backend2 = BOMBackend(data_dir=tmp2.name)
-            result = backend2.csv.import_parts_csv(out_csv)
-            self.assertTrue(result["ok"])
-            self.assertEqual(result["data"]["created"], 2)
-
-            p1 = backend2.parts.get_part("P1")
-            self.assertTrue(p1["ok"])
-            self.assertAlmostEqual(float(p1["data"]["part"]["attributes"]["cost"]), 9.99)
-            self.assertEqual(p1["data"]["part"]["attributes"]["material"], "ABS")
-        finally:
-            tmp2.cleanup()
-
     # ------------------------------------------------------- Part catalog --
 
     def test_delete_part_with_relationships_blocked(self) -> None:
@@ -373,6 +306,96 @@ class TestBOMBackend(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertEqual(len(result["data"]["parts"]), 1)
         self.assertEqual(len(result["data"]["relationships"]), 0)
+
+
+class TestProjectStore(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / PROJECT_FILENAME
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_section_roundtrip(self) -> None:
+        store = ProjectStore(self.path)
+        store.write_section("parts", [{"part_number": "A"}])
+        self.assertEqual(store.read_section("parts"), [{"part_number": "A"}])
+
+    def test_writing_one_section_preserves_others(self) -> None:
+        store = ProjectStore(self.path)
+        store.write_section("snapshots", [{"snapshot_id": "S1"}])
+        store.write_section("parts", [{"part_number": "A"}])
+        # Writing parts must not drop the snapshots section.
+        self.assertEqual(store.read_section("snapshots"), [{"snapshot_id": "S1"}])
+        self.assertEqual(store.read_section("parts"), [{"part_number": "A"}])
+
+    def test_batch_single_write(self) -> None:
+        store = ProjectStore(self.path)
+        with store.batch():
+            store.write_section("parts", [{"part_number": "A"}])
+            store.write_section("relationships", [{"rel_id": "R1"}])
+        fresh = ProjectStore(self.path)
+        self.assertEqual(fresh.read_section("parts"), [{"part_number": "A"}])
+        self.assertEqual(fresh.read_section("relationships"), [{"rel_id": "R1"}])
+
+    def test_backend_uses_single_file(self) -> None:
+        backend = BOMBackend(data_dir=self.tmp.name)
+        backend.parts.add_or_update_part("A", "Assembly A", {"unit_weight": 1.0})
+        backend.bom.add_or_update_relationship("A", "B", qty=2, rel_id="R1", allow_dangling=True)
+        backend.snapshots.create_snapshot(label="v1")
+
+        self.assertTrue(self.path.exists())
+        with self.path.open() as handle:
+            document = json.load(handle)
+        self.assertEqual(set(document.keys()), {"version", "parts", "relationships", "snapshots"})
+        self.assertEqual(len(document["parts"]), 1)
+        self.assertEqual(len(document["relationships"]), 1)
+        self.assertEqual(len(document["snapshots"]), 1)
+
+
+class TestLegacyMigration(unittest.TestCase):
+    def test_migrates_legacy_files_into_one_file(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        try:
+            base = Path(tmp.name)
+            (base / "parts.json").write_text(
+                json.dumps({"parts": [{"part_number": "A", "name": "Assembly A", "attributes": {}}]})
+            )
+            (base / "relationships.json").write_text(
+                json.dumps(
+                    {
+                        "relationships": [
+                            {"rel_id": "R1", "parent_part_number": "A", "child_part_number": "B", "qty": 2}
+                        ]
+                    }
+                )
+            )
+            snap_dir = base / "snapshots"
+            snap_dir.mkdir()
+            (snap_dir / "snap_x.json").write_text(
+                json.dumps(
+                    {
+                        "snapshot_id": "snap_x",
+                        "root_part_number": "A",
+                        "created_at": "2026-01-01T00:00:00Z",
+                        "signature": "sig",
+                        "label": "legacy",
+                        "parts": [],
+                        "relationships": [],
+                    }
+                )
+            )
+
+            backend = BOMBackend(data_dir=base)
+            self.assertTrue((base / PROJECT_FILENAME).exists())
+            parts = backend.parts.list_parts()
+            self.assertTrue(parts["ok"])
+            self.assertEqual(len(parts["data"]["parts"]), 1)
+            snapshots = backend.snapshots.list_snapshots()
+            self.assertEqual(len(snapshots["data"]["snapshots"]), 1)
+            self.assertEqual(snapshots["data"]["snapshots"][0]["snapshot_id"], "snap_x")
+        finally:
+            tmp.cleanup()
 
 
 if __name__ == "__main__":

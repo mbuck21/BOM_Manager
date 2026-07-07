@@ -7,14 +7,13 @@ from typing import Any
 
 import streamlit as st
 
+from bom_backend.store import PROJECT_FILENAME
 from streamlit_ui.context import AppContext, build_app_context
 from streamlit_ui.helpers import resolve_data_dir, show_service_result
 from streamlit_ui.tabs import (
     render_analysis_tab,
-    render_csv_tab,
     render_dashboard_tab,
-    render_parts_tab,
-    render_relationships_tab,
+    render_edit_tab,
     render_weight_analysis_tab,
 )
 
@@ -325,12 +324,12 @@ def render_snapshot_selector(ctx: AppContext) -> None:
 
 
 def render_data_snapshot_tab(ctx: AppContext) -> None:
-    st.subheader("Data Directory")
+    st.subheader("Data File")
 
     if DATA_DIR_INPUT_KEY not in st.session_state:
         st.session_state[DATA_DIR_INPUT_KEY] = st.session_state.get(DATA_DIR_KEY, "demo_data")
 
-    entered_data_dir = st.text_input("Data directory", key=DATA_DIR_INPUT_KEY)
+    entered_data_dir = st.text_input("Data folder", key=DATA_DIR_INPUT_KEY)
     if entered_data_dir != st.session_state.get(DATA_DIR_KEY, "demo_data"):
         st.session_state[DATA_DIR_KEY] = entered_data_dir
         st.session_state[ACTIVE_SNAPSHOT_ID_KEY] = None
@@ -339,10 +338,10 @@ def render_data_snapshot_tab(ctx: AppContext) -> None:
 
     data_dir = resolve_data_dir(st.session_state.get(DATA_DIR_KEY, "demo_data"))
     repo_root = Path.cwd().resolve()
-    st.caption(f"Resolved path: `{data_dir}`")
-    st.code("streamlit run streamlit_app.py", language="bash")
+    st.caption(f"Everything (current BOM + saved versions) lives in one file:")
+    st.code(f"{data_dir / PROJECT_FILENAME}")
 
-    if st.button("Reset Data Directory", key="reset_data_dir_btn"):
+    if st.button("Reset Data Folder", key="reset_data_dir_btn"):
         if data_dir == repo_root:
             st.error("Refusing to delete repository root.")
         elif repo_root not in data_dir.parents:
@@ -353,34 +352,34 @@ def render_data_snapshot_tab(ctx: AppContext) -> None:
             st.success(f"Cleared {data_dir}")
             st.rerun()
 
+
+def render_history_tab(ctx: AppContext) -> None:
+    st.subheader("Save a Version")
+    st.caption(
+        "Every time you press Save on the Edit tab a version is kept automatically. "
+        "Use this to save a **named baseline** you can compare against later."
+    )
+
+    if ctx.snapshot_mode:
+        st.info("You're viewing a saved version. Load **Live Data** below to save a new one.")
+
+    with st.form("save_version_form"):
+        version_label = st.text_input("Version label", placeholder="PDR baseline")
+        submit_version = st.form_submit_button(
+            "Save version now", type="primary", disabled=ctx.snapshot_mode
+        )
+    if submit_version:
+        create_result = ctx.live_backend.snapshots.create_snapshot(
+            label=version_label or None,
+            deduplicate_if_identical=True,
+        )
+        show_service_result("Save version", create_result)
+
     st.divider()
     render_snapshot_selector(ctx)
 
     st.divider()
-    st.subheader("Create Snapshot")
-
-    universal_root = st.session_state.get(UNIVERSAL_ROOT_PART_KEY, "").strip()
-    st.caption(f"Root from sidebar: `{universal_root or '(none selected)'}`")
-
-    with st.form("snapshot_create_form"):
-        snapshot_label = st.text_input("Snapshot label", placeholder="baseline")
-        deduplicate = st.checkbox("Deduplicate if identical", value=True)
-        submit_snapshot = st.form_submit_button("Create Snapshot", disabled=not universal_root)
-
-    if submit_snapshot:
-        create_result = ctx.live_backend.snapshots.create_snapshot(
-            root_part_number=universal_root,
-            label=snapshot_label or None,
-            deduplicate_if_identical=deduplicate,
-        )
-        show_service_result("Create snapshot", create_result, show_data=True)
-
-
-def render_metrics(parts_count: int, relationships_count: int, snapshots_count: int) -> None:
-    metric_col1, metric_col2, metric_col3 = st.columns(3)
-    metric_col1.metric("Parts", parts_count)
-    metric_col2.metric("Relationships", relationships_count)
-    metric_col3.metric("Snapshots", snapshots_count)
+    render_analysis_tab(ctx, root_part_number=st.session_state.get(UNIVERSAL_ROOT_PART_KEY, ""))
 
 
 def main() -> None:
@@ -436,57 +435,25 @@ def main() -> None:
 
 
 
-    (
-        tab_dashboard,
-        tab_data_snapshot,
-        tab_parts,
-        tab_relationships,
-        tab_analysis,
-        tab_weight,
-        tab_csv,
-    ) = st.tabs(
-        ["Dashboard", "Data & Snapshots", "Parts", "Relationships", "Analysis", "Weight Analysis", "CSV"]
+    tab_edit, tab_weight, tab_history, tab_data = st.tabs(
+        ["Edit", "Weight & Rollup", "History", "Data"]
     )
 
-    with tab_dashboard:
-        render_dashboard_tab(ctx, root_part_number=universal_root, root_state_key=UNIVERSAL_ROOT_PART_KEY)
-    
-    with tab_data_snapshot:
-        render_data_snapshot_tab(ctx)
-
-    with tab_parts:
-        render_parts_tab(ctx, root_part_number=universal_root)
-
-    with tab_relationships:
-        render_relationships_tab(ctx, root_part_number=universal_root)
-
-    with tab_analysis:
-        render_analysis_tab(ctx, root_part_number=universal_root)
+    with tab_edit:
+        render_edit_tab(ctx, root_part_number=universal_root)
 
     with tab_weight:
+        render_dashboard_tab(
+            ctx, root_part_number=universal_root, root_state_key=UNIVERSAL_ROOT_PART_KEY
+        )
+        st.divider()
         render_weight_analysis_tab(ctx, root_part_number=universal_root)
 
-    with tab_csv:
-        render_csv_tab(ctx)
+    with tab_history:
+        render_history_tab(ctx)
 
-    st.divider()
-    st.subheader("Debug Metrics")
-
-    render_metrics(
-        parts_count=len(ctx.parts),
-        relationships_count=len(ctx.relationships),
-        snapshots_count=len(ctx.snapshots),
-    )
-
-    if ctx.loaded_snapshot_id:
-        latest_flag = "Yes" if ctx.is_latest_snapshot_loaded else "No"
-        st.caption(f"Loaded snapshot: `{ctx.loaded_snapshot_id}` | Is latest: `{latest_flag}`")
-    else:
-        st.caption("Loaded snapshot: `None (live data)`")
-    if universal_root:
-        st.caption(f"Universal root part: `{universal_root}`")
-    else:
-        st.caption("Universal root part: `None`")
+    with tab_data:
+        render_data_snapshot_tab(ctx)
 
 
 if __name__ == "__main__":

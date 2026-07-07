@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 from bom_backend.models import Part, Relationship, Snapshot
@@ -13,52 +11,16 @@ from bom_backend.serialization import (
     snapshot_from_record,
     snapshot_to_record,
 )
+from bom_backend.store import ProjectStore
 from bom_backend.utils.sorting import relationship_sort_key
 
 
-class JSONFileCollection:
-    def __init__(self, path: Path, root_key: str) -> None:
-        self.path = path
-        self.root_key = root_key
-        self._ensure_file()
-
-    def _ensure_file(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        if not self.path.exists():
-            self._write_records([])
-
-    def _read_records(self) -> list[dict[str, Any]]:
-        self._ensure_file()
-        with self.path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-
-        if isinstance(payload, dict):
-            items = payload.get(self.root_key, [])
-            if isinstance(items, list):
-                return [dict(item) for item in items]
-            return []
-
-        if isinstance(payload, list):
-            return [dict(item) for item in payload]
-
-        return []
-
-    def _write_records(self, records: list[dict[str, Any]]) -> None:
-        payload = {self.root_key: records}
-        tmp = self.path.with_suffix(".tmp")
-        with tmp.open("w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2, sort_keys=True, ensure_ascii=True)
-            handle.write("\n")
-        tmp.replace(self.path)
-
-
 class PartRepository:
-    def __init__(self, data_dir: str | Path) -> None:
-        base = Path(data_dir)
-        self._store = JSONFileCollection(base / "parts.json", "parts")
+    def __init__(self, store: ProjectStore) -> None:
+        self._store = store
 
     def list_parts(self) -> list[Part]:
-        records = self._store._read_records()
+        records = self._store.read_section("parts")
         parts = [part_from_record(record) for record in records]
         parts.sort(key=lambda part: part.part_number)
         return parts
@@ -74,7 +36,7 @@ class PartRepository:
         parts[part.part_number] = part
 
         ordered = [part_to_record(parts[key]) for key in sorted(parts.keys())]
-        self._store._write_records(ordered)
+        self._store.write_section("parts", ordered)
         return part
 
     def delete(self, part_number: str) -> bool:
@@ -85,15 +47,14 @@ class PartRepository:
         if deleted:
             ordered = [part_to_record(part) for part in kept]
             ordered.sort(key=lambda item: item["part_number"])
-            self._store._write_records(ordered)
+            self._store.write_section("parts", ordered)
 
         return deleted
 
 
 class RelationshipRepository:
-    def __init__(self, data_dir: str | Path) -> None:
-        base = Path(data_dir)
-        self._store = JSONFileCollection(base / "relationships.json", "relationships")
+    def __init__(self, store: ProjectStore) -> None:
+        self._store = store
 
     def _sort_records(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return sorted(
@@ -107,7 +68,7 @@ class RelationshipRepository:
         )
 
     def list_relationships(self) -> list[Relationship]:
-        records = self._store._read_records()
+        records = self._store.read_section("relationships")
         records = self._sort_records(records)
         return [relationship_from_record(record) for record in records]
 
@@ -120,7 +81,7 @@ class RelationshipRepository:
 
         records = [relationship_to_record(item) for item in relationships.values()]
         records = self._sort_records(records)
-        self._store._write_records(records)
+        self._store.write_section("relationships", records)
         return relationship
 
     def delete(self, rel_id: str) -> bool:
@@ -131,7 +92,7 @@ class RelationshipRepository:
         if deleted:
             records = [relationship_to_record(item) for item in kept]
             records = self._sort_records(records)
-            self._store._write_records(records)
+            self._store.write_section("relationships", records)
 
         return deleted
 
@@ -158,46 +119,34 @@ class RelationshipRepository:
 
 
 class SnapshotRepository:
-    def __init__(self, data_dir: str | Path) -> None:
-        base = Path(data_dir)
-        self.snapshot_dir = base / "snapshots"
-        self.snapshot_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, store: ProjectStore) -> None:
+        self._store = store
 
-    def _path_for(self, snapshot_id: str) -> Path:
-        return self.snapshot_dir / f"{snapshot_id}.json"
+    def _read_snapshots(self) -> list[Snapshot]:
+        return [snapshot_from_record(record) for record in self._store.read_section("snapshots")]
 
     def save(self, snapshot: Snapshot) -> Snapshot:
-        path = self._path_for(snapshot.snapshot_id)
-        if path.exists():
+        snapshots = self._read_snapshots()
+        if any(existing.snapshot_id == snapshot.snapshot_id for existing in snapshots):
             raise ValueError(f"Snapshot '{snapshot.snapshot_id}' already exists")
 
-        payload = snapshot_to_record(snapshot)
-        tmp = path.with_suffix(".tmp")
-        with tmp.open("w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2, sort_keys=True, ensure_ascii=True)
-            handle.write("\n")
-        tmp.replace(path)
-
+        snapshots.append(snapshot)
+        snapshots.sort(key=lambda item: (item.created_at, item.snapshot_id))
+        self._store.write_section(
+            "snapshots", [snapshot_to_record(item) for item in snapshots]
+        )
         return snapshot
 
     def get(self, snapshot_id: str) -> Snapshot | None:
-        path = self._path_for(snapshot_id)
-        if not path.exists():
-            return None
-
-        with path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-        return snapshot_from_record(payload)
+        return {item.snapshot_id: item for item in self._read_snapshots()}.get(snapshot_id)
 
     def list_snapshots(self, root_part_number: str | None = None) -> list[Snapshot]:
-        snapshots: list[Snapshot] = []
-        for file_path in sorted(self.snapshot_dir.glob("*.json")):
-            with file_path.open("r", encoding="utf-8") as handle:
-                payload = json.load(handle)
-            snapshot = snapshot_from_record(payload)
-            if root_part_number and snapshot.root_part_number != root_part_number:
-                continue
-            snapshots.append(snapshot)
-
+        snapshots = self._read_snapshots()
+        if root_part_number:
+            snapshots = [
+                snapshot
+                for snapshot in snapshots
+                if snapshot.root_part_number == root_part_number
+            ]
         snapshots.sort(key=lambda item: (item.created_at, item.snapshot_id))
         return snapshots

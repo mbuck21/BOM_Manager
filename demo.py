@@ -213,46 +213,12 @@ def main() -> None:
         f"rel_modified:{len(diff['relationship_changes']['modified'])}"
     )
 
-    print_section("CSV Export")
-    export_dir = data_dir / "exports"
-    parts_csv = export_dir / "parts_export.csv"
-    rels_csv = export_dir / "relationships_export.csv"
-
-    require_ok(
-        "export parts CSV",
-        backend.csv.export_parts_csv(
-            parts_csv,
-            attribute_whitelist=["weight_kg", "material", "cost_usd"],
-        ),
+    print_section("Whole-project version")
+    project_version = require_ok(
+        "create whole-project version",
+        backend.snapshots.create_snapshot(label="project baseline"),
     )
-    require_ok(
-        "export relationships CSV",
-        backend.csv.export_relationships_csv(
-            rels_csv,
-            attribute_whitelist=["find_number", "note"],
-        ),
-    )
-    print(f"parts_csv={parts_csv}")
-    print(f"relationships_csv={rels_csv}")
-
-    print_section("CSV Round Trip")
-    roundtrip_backend = BOMBackend(data_dir=data_dir / "roundtrip")
-    require_ok("import parts CSV", roundtrip_backend.csv.import_parts_csv(parts_csv))
-    require_ok(
-        "import relationships CSV",
-        roundtrip_backend.csv.import_relationships_csv(rels_csv, allow_dangling=False),
-    )
-
-    roundtrip_parts = require_ok("roundtrip list parts", roundtrip_backend.parts.list_parts())
-    roundtrip_subgraph = require_ok(
-        "roundtrip subgraph A-100",
-        roundtrip_backend.bom.get_subgraph("A-100"),
-    )
-    print(
-        "roundtrip_counts="
-        f"parts:{len(roundtrip_parts['parts'])}, "
-        f"relationships:{len(roundtrip_subgraph['relationships'])}"
-    )
+    print(f"project_version_id={project_version['snapshot']['snapshot_id']}")
 
     print_section("Done")
     print("Demo completed successfully.")

@@ -45,48 +45,56 @@ class SnapshotService:
     @service_guard
     def create_snapshot(
         self,
-        root_part_number: str,
+        root_part_number: str = "",
         label: str | None = None,
         deduplicate_if_identical: bool = True,
     ) -> ServiceResult:
         root_part_number = (root_part_number or "").strip()
+
         if not root_part_number:
-            return err_result("root_part_number is required")
+            # Whole-project version: freeze every part and relationship. This backs the
+            # save-history feature (each Save appends a project-wide version).
+            warnings: list[str] = []
+            frozen_relationships = self._ordered_relationships(
+                self.relationship_repo.list_relationships()
+            )
+            frozen_parts = self._ordered_parts(self.part_repo.list_parts())
+        else:
+            subgraph_result = self.bom_service.get_subgraph(root_part_number)
+            if not subgraph_result["ok"]:
+                return subgraph_result
 
-        subgraph_result = self.bom_service.get_subgraph(root_part_number)
-        if not subgraph_result["ok"]:
-            return subgraph_result
+            relationship_records = subgraph_result["data"]["relationships"]
+            relationships = [Relationship(**record) for record in relationship_records]
+            relationship_lookup_ids = {item.rel_id for item in relationships}
 
-        relationship_records = subgraph_result["data"]["relationships"]
-        relationships = [Relationship(**record) for record in relationship_records]
-        relationship_lookup_ids = {item.rel_id for item in relationships}
+            # Pull from repository to freeze the exact relationship records at snapshot time.
+            frozen_relationships = [
+                relationship
+                for relationship in self.relationship_repo.list_relationships()
+                if relationship.rel_id in relationship_lookup_ids
+            ]
+            frozen_relationships = self._ordered_relationships(frozen_relationships)
 
-        # Pull from repository to freeze the exact relationship records at snapshot time.
-        frozen_relationships = [
-            relationship
-            for relationship in self.relationship_repo.list_relationships()
-            if relationship.rel_id in relationship_lookup_ids
-        ]
-        frozen_relationships = self._ordered_relationships(frozen_relationships)
+            reachable_parts = {root_part_number}
+            for relationship in frozen_relationships:
+                reachable_parts.add(relationship.parent_part_number)
+                reachable_parts.add(relationship.child_part_number)
 
-        reachable_parts = {root_part_number}
-        for relationship in frozen_relationships:
-            reachable_parts.add(relationship.parent_part_number)
-            reachable_parts.add(relationship.child_part_number)
+            warnings = list(subgraph_result.get("warnings") or [])
+            frozen_parts = []
 
-        warnings: list[str] = list(subgraph_result.get("warnings") or [])
-        frozen_parts: list[Part] = []
+            for part_number in sorted(reachable_parts):
+                part = self.part_repo.get(part_number)
+                if part is None:
+                    warnings.append(
+                        f"Part '{part_number}' is referenced in BOM but missing from catalog"
+                    )
+                    continue
+                frozen_parts.append(part)
 
-        for part_number in sorted(reachable_parts):
-            part = self.part_repo.get(part_number)
-            if part is None:
-                warnings.append(
-                    f"Part '{part_number}' is referenced in BOM but missing from catalog"
-                )
-                continue
-            frozen_parts.append(part)
+            frozen_parts = self._ordered_parts(frozen_parts)
 
-        frozen_parts = self._ordered_parts(frozen_parts)
         signature = build_signature(root_part_number, frozen_parts, frozen_relationships)
 
         if deduplicate_if_identical:

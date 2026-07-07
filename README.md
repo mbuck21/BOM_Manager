@@ -7,8 +7,7 @@ This project provides a file-backed BOM backend with services for:
 - BOM relationship management with cycle prevention
 - subgraph traversal
 - numeric rollups
-- snapshots and snapshot diffs
-- CSV import/export
+- snapshots (version history) and snapshot diffs
 
 ## Install and Initialize
 
@@ -18,10 +17,14 @@ from bom_backend import BOMBackend
 backend = BOMBackend(data_dir="data")  # default is "data"
 ```
 
-Data is stored in:
-- `data/parts.json`
-- `data/relationships.json`
-- `data/snapshots/<snapshot_id>.json`
+Everything for a data directory — the current parts, relationships, and the full
+version history — is stored in a single file:
+
+- `data/project.bom.json` with three sections: `parts`, `relationships`, `snapshots`
+
+Legacy layouts (`parts.json` + `relationships.json` + `snapshots/*.json`) are
+migrated into `project.bom.json` automatically and non-destructively the first time
+a `BOMBackend` opens the directory.
 
 ## Response Format (All Backend Functions)
 
@@ -131,10 +134,14 @@ print(rollup["data"]["total"])  # 14.0
 
 ### `backend.snapshots`
 
-1. `create_snapshot(root_part_number, label=None, deduplicate_if_identical=True)`
-- Captures immutable snapshot of the root subgraph.
-- Computes deterministic signature.
-- If identical snapshot already exists and deduplication is enabled, returns existing snapshot with `data.deduplicated=True`.
+1. `create_snapshot(root_part_number="", label=None, deduplicate_if_identical=True)`
+- Captures an immutable snapshot (a version in history).
+- With `root_part_number` omitted/empty, freezes the **whole project** (all parts and
+  relationships) — this backs the save-history feature.
+- With a `root_part_number`, freezes just that assembly's subgraph.
+- Computes a deterministic signature; if an identical snapshot already exists and
+  deduplication is enabled, returns the existing one with `data.deduplicated=True`
+  (so repeated saves don't bloat history).
 - Returns `data.snapshot`.
 
 2. `get_snapshot(snapshot_id)`
@@ -154,33 +161,17 @@ print(rollup["data"]["total"])  # 14.0
   - signature equality and overall equality flags
 - Returns diff details under `data`.
 
-### `backend.csv` (CSV Import/Export)
+## Editing in the App
 
-1. `import_parts_csv(csv_path, merge_attributes=True)`
-- Required columns: `part_number`, `name`
-- Imports rows as parts.
-- Returns created/updated/failed counts and `row_errors`.
+The Streamlit app (`streamlit run streamlit_app.py`) presents four tabs:
 
-2. `import_relationships_csv(csv_path, allow_dangling=False, merge_attributes=True)`
-- Required columns: `parent_part_number`, `child_part_number`, `qty`
-- Imports rows as relationships.
-- Returns created/updated/failed counts and `row_errors`.
-
-3. `export_parts_csv(csv_path, attribute_whitelist=None, include_attributes_json=True)`
-- Exports parts to CSV.
-- `attribute_whitelist` emits explicit attribute columns.
-- Returns output file path, row count, and column list.
-
-4. `export_relationships_csv(csv_path, attribute_whitelist=None, include_attributes_json=True)`
-- Exports relationships to CSV.
-- Same whitelist behavior as parts export.
-
-## CSV Attribute Mapping Rules
-
-- `attributes_json` can provide a JSON object of attributes.
-- Any non-reserved column is treated as an attribute.
-- Columns prefixed with `attr__` are mapped to the attribute name without the prefix.
-- CSV values are parsed into typed values when possible (for example numbers/bools).
+- **Edit** — two spreadsheet-style grids (Parts, and BOM structure) you edit like Excel:
+  click a cell, type, paste, add/delete rows, then press **Save changes**. Weight and
+  maturity factor are first-class numeric columns. Optionally focus on one assembly.
+- **Weight & Rollup** — mass rollup dashboard and weight-reduction analysis.
+- **History** — save a named baseline version, load any past version (read-only), and diff
+  two versions. Every Save on the Edit tab also auto-appends a version (deduped).
+- **Data** — point at a data folder; everything lives in one `project.bom.json`.
 
 ## Run Tests
 
