@@ -11,7 +11,7 @@ understanding and reporting weight.
 > **Point of contact:** Matt Buckley — <matthew.p.buckley@lmco.com> — for bugs, feature
 > ideas, or help getting the tool running.
 >
-> This tool was built with AI assistance (Anthropic Claude), guided and reviewed by the
+> This tool was built with AI assistance, guided and reviewed by the
 > maintainer. Developers: see [`ARCHITECTURE.md`](ARCHITECTURE.md) for how the code is
 > organized.
 

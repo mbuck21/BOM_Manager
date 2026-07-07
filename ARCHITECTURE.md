@@ -1,9 +1,8 @@
 # Architecture
 
 How the Mass Allocation Tracking Tool is put together. For usage, see `README.md`.
-For AI-agent-oriented working notes, see `CLAUDE.md`.
 
-> This codebase was written with the use of AI (Anthropic Claude), guided and reviewed by
+> This codebase was written with the use of AI, guided and reviewed by
 > the maintainer. **POC for bugs, features, or setup help: Matt Buckley
 > (matthew.p.buckley@lmco.com).**
 
@@ -119,6 +118,76 @@ Everything lives in `<data folder>/project.bom.json`:
    is applied through the normal services inside one `batch()`.
 5. **No hardcoded vocabulary** — categories, weight bases, zones, etc. are user-defined
    columns; the group-by and coverage views work generically off whatever exists.
+6. **Performance** — Streamlit reruns the whole script on every widget interaction, so
+   traversals must never call repository lookups (`get`/`find_children`) per BOM node:
+   `list_parts()`/`list_relationships()` once and index into dicts (see
+   `rollup_weight_with_maturity`, `get_subgraph`, `subtree_weight_map`). `ProjectStore`
+   keeps an mtime-keyed parse cache; cached records are shared, so never mutate records
+   returned by a repository in place. `tests/test_backend.py::TestReadEfficiency` guards
+   the read counts.
+7. **Snapshot edits are metadata-only** — `update_snapshot` may change label/created_at
+   but never content or signature; neither it nor `delete_snapshot` creates an
+   auto-version. Per-snapshot rollups in the UI are `st.cache_data`-cached keyed by
+   snapshot id (safe: snapshot content is immutable).
+
+## Development notes
+
+**Run / test:**
+
+```bash
+pip install -r requirements.txt                       # streamlit only
+streamlit run streamlit_app.py                        # opens on demo_data/
+python -m streamlit run streamlit_app.py              # same, when `streamlit` isn't on PATH
+python -m streamlit run streamlit_app.py -- --data-dir <path>   # open a specific folder
+python -m unittest discover -s tests -p "test_*.py"   # full suite, <1s
+```
+
+The startup data folder resolves as: `--data-dir` script arg → `BOM_DATA_DIR` env var →
+`demo_data` (`helpers.data_dir_from_args`; explicit flag only, so test-runner argv is
+never mistaken for a path).
+
+**Headless app verification** uses Streamlit's AppTest:
+
+```python
+from streamlit.testing.v1 import AppTest
+at = AppTest.from_file("streamlit_app.py", default_timeout=120)
+at.run()                     # boots on demo_data, LIVE (editable) mode
+assert not at.exception
+# To force a saved-version (read-only) view, all three keys are required:
+from streamlit_ui.helpers import resolve_data_dir
+at2 = AppTest.from_file("streamlit_app.py", default_timeout=120)
+at2.session_state["active_snapshot_id"] = "<snapshot_id>"
+at2.session_state["snapshot_selection_initialized"] = True
+at2.session_state["snapshot_selection_data_dir"] = str(resolve_data_dir("demo_data").resolve())
+at2.run()
+```
+
+Avoid two AppTest sessions in one process on the full demo data (memory-heavy) — use
+separate processes.
+
+**Streamlit gotchas this project hit:**
+
+- Use `width="stretch"`, never `use_container_width=True` (removed after 2025-12).
+- `st.data_editor` column types must match DataFrame dtypes: numeric columns pinned with
+  `pd.to_numeric(...)`, text columns with `.astype("object")`; extra attribute cells are
+  stringified in `grid_edit.build_parts_grid` (a raw bool cell + TextColumn crashes it).
+- Grid row identity: parts rows carry a hidden `_row_id` (part-number renames detect as
+  rename, not delete+add); BOM rows are keyed by `rel_id`; `last_updated` is display-only
+  and excluded from reconciliation.
+- Editor state resets by baking a version counter (`_edit_grid_v`) into widget keys —
+  bump it after successful commits and `st.rerun()`.
+- `main()` resets the version selection whenever the resolved data dir changes — that's
+  why AppTest needs all three session keys above.
+
+**Conventions:** backend services return `{ok,data,errors,warnings}` under
+`@service_guard` and never raise across the boundary. UI workflow logic lives in
+Streamlit-free modules as a `plan_*` (pure, returns a dataclass/dict with errors) +
+`apply_*` (runs inside `store.batch()`, returns `(errors, notes)`) pair — see
+`restructure.py`. Fold service results into error/note lists with
+`helpers.collect_service_result`; use `helpers.part_key`/`build_part_lookup` for part
+lookups. Every new commit path must end with
+`snapshots.create_snapshot(deduplicate_if_identical=True)` (see `_finish_commit` in
+`tabs/edit.py`).
 
 ## Open ideas
 

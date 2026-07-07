@@ -126,7 +126,7 @@ def _render_about() -> None:
             "press **Save changes**, then check **Weight & Rollup**. Every save is kept as a "
             "version on the **History** tab.\n\n"
             f"**Questions, bugs, or feature ideas?**\nContact {POC_LINE}.\n\n"
-            "Full guide: see `README.md`. Built with AI assistance (Anthropic Claude)."
+            "Full guide: see `README.md`. Built with AI assistance."
         )
 
 

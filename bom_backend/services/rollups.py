@@ -105,7 +105,7 @@ class RollupService:
 
         # Index the whole project once. Per-node repository calls (get/find_children)
         # would re-read the data file for every BOM node — hundreds of parses per
-        # rollup on a real project. See the performance invariant in CLAUDE.md.
+        # rollup on a real project. See the performance notes in ARCHITECTURE.md.
         parts_by_number = {part.part_number: part for part in self.part_repo.list_parts()}
         children_by_parent: dict[str, list[Relationship]] = {}
         for relationship in self.relationship_repo.list_relationships():

@@ -249,7 +249,7 @@ class BOMStructureService:
         subgraph_relationships: list[Relationship] = []
 
         # Index once — per-node find_children/get calls re-read the data file each time
-        # (see the performance invariant in CLAUDE.md).
+        # (see the performance notes in ARCHITECTURE.md).
         children_by_parent: dict[str, list[Relationship]] = {}
         for relationship in self.relationship_repo.list_relationships():
             children_by_parent.setdefault(relationship.parent_part_number, []).append(relationship)

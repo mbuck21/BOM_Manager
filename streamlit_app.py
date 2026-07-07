@@ -1,5 +1,5 @@
 # Mass Allocation Tracking Tool — Streamlit entry point.
-# This codebase was written with the use of AI (Anthropic Claude), guided and reviewed by
+# This codebase was written with the use of AI, guided and reviewed by
 # the maintainer. POC for bugs, features, or setup help: Matt Buckley
 # (matthew.p.buckley@lmco.com). See README.md for usage and ARCHITECTURE.md for design.
 
@@ -110,7 +110,7 @@ def main() -> None:
     st.divider()
     st.caption(
         f"Questions, bugs, or feature ideas? Contact {POC_LINE}. "
-        "Built with AI assistance (Anthropic Claude)."
+        "Built with AI assistance."
     )
 
 
